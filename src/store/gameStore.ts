@@ -6,6 +6,8 @@ import { SUBSCRIPTIONS, getNextTier } from '../data/subscriptions'
 import { getUpgradeById } from '../data/upgrades'
 import { MILESTONES } from '../data/milestones'
 
+const DEMO_MULTIPLIER = 1_000_000
+
 interface GameStore {
   // State
   currencies: Currencies
@@ -15,6 +17,7 @@ interface GameStore {
   ownedUpgrades: string[]
   completedMilestones: string[]
   unlockedTools: string[]
+  isDemoMode: boolean
   
   // Currency actions
   addVibeCodes: (amount: number) => void
@@ -47,6 +50,9 @@ interface GameStore {
   
   // Tool unlocking
   checkToolUnlocks: () => void
+  
+  // Demo mode
+  toggleDemoMode: () => void
   
   // Reset
   resetGame: () => void
@@ -83,6 +89,11 @@ export const useGameStore = create<GameStore>()(
       ownedUpgrades: [],
       completedMilestones: [],
       unlockedTools: ['claude-baseline'],
+      isDemoMode: false,
+
+      toggleDemoMode: () => {
+        set((state) => ({ isDemoMode: !state.isDemoMode }))
+      },
 
       addVibeCodes: (amount) => {
         set((state) => ({
@@ -144,7 +155,9 @@ export const useGameStore = create<GameStore>()(
       },
 
       handleClick: () => {
-        const clickValue = get().getClickValue()
+        const { isDemoMode } = get()
+        const baseClickValue = get().getClickValue()
+        const demoMultiplier = isDemoMode ? DEMO_MULTIPLIER : 1
         
         // Check for crit from ultra subscriptions
         const { ownedTools } = get()
@@ -156,12 +169,18 @@ export const useGameStore = create<GameStore>()(
           }
         })
         
-        const finalValue = clickValue * critMultiplier
+        const finalValue = baseClickValue * critMultiplier * demoMultiplier
+        
+        // Also add dev points and prompt tokens in demo mode
+        const devPointsBonus = isDemoMode ? 10000 : 0
+        const promptTokensBonus = isDemoMode ? 10000 : 0
         
         set((state) => ({
           currencies: {
             ...state.currencies,
             vibeCodes: state.currencies.vibeCodes + finalValue,
+            devPoints: state.currencies.devPoints + devPointsBonus,
+            promptTokens: state.currencies.promptTokens + promptTokensBonus,
           },
           stats: {
             ...state.stats,
@@ -278,7 +297,8 @@ export const useGameStore = create<GameStore>()(
       },
 
       getPassiveIncome: () => {
-        const { ownedTools, ownedUpgrades, stats } = get()
+        const { ownedTools, ownedUpgrades, stats, isDemoMode } = get()
+        const demoMultiplier = isDemoMode ? DEMO_MULTIPLIER : 1
         let totalVB = 0
         let totalPT = 0
         
@@ -311,8 +331,8 @@ export const useGameStore = create<GameStore>()(
         const prestigeBonus = 1 + stats.projectTokens * 0.1
         
         return {
-          vibeCodes: totalVB * (1 + additiveBonus) * multiplicativeBonus * prestigeBonus,
-          promptTokens: totalPT,
+          vibeCodes: totalVB * (1 + additiveBonus) * multiplicativeBonus * prestigeBonus * demoMultiplier,
+          promptTokens: totalPT * demoMultiplier,
         }
       },
 
@@ -441,11 +461,22 @@ export const useGameStore = create<GameStore>()(
           ownedUpgrades: [],
           completedMilestones: [],
           unlockedTools: ['claude-baseline'],
+          isDemoMode: false,
         })
       },
     }),
     {
       name: 'vibecode-clicker-save',
+      partialize: (state) => ({
+        currencies: state.currencies,
+        stats: state.stats,
+        settings: state.settings,
+        ownedTools: state.ownedTools,
+        ownedUpgrades: state.ownedUpgrades,
+        completedMilestones: state.completedMilestones,
+        unlockedTools: state.unlockedTools,
+        // isDemoMode is NOT persisted - always starts as false
+      }),
     }
   )
 )

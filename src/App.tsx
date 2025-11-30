@@ -19,6 +19,8 @@ function App() {
   
   const [activeTab, setActiveTab] = useState<Tab>('tools')
   const resetGame = useGameStore((s) => s.resetGame)
+  const isDemoMode = useGameStore((s) => s.isDemoMode)
+  const toggleDemoMode = useGameStore((s) => s.toggleDemoMode)
 
   const tabs: { id: Tab; label: string; icon: string }[] = [
     { id: 'tools', label: 'Инструменты', icon: '🛠️' },
@@ -31,8 +33,17 @@ function App() {
     <div className="min-h-screen text-text-primary relative">
       <Background />
       
+      {/* Demo Mode Banner */}
+      {isDemoMode && (
+        <div className="fixed top-0 left-0 right-0 z-[100] bg-gradient-to-r from-neon-yellow/20 via-neon-yellow/30 to-neon-yellow/20 border-b border-neon-yellow/50 py-1 text-center">
+          <span className="text-neon-yellow font-bold text-sm animate-pulse">
+            🚀 DEMO MODE - x1,000,000 множитель активен
+          </span>
+        </div>
+      )}
+      
       {/* Header */}
-      <header className="sticky top-0 z-50 backdrop-blur-md bg-dark-900/80 border-b border-dark-600">
+      <header className={`sticky ${isDemoMode ? 'top-[28px]' : 'top-0'} z-50 backdrop-blur-md bg-dark-900/80 border-b border-dark-600`}>
         <div className="max-w-7xl mx-auto px-4 py-3">
           <div className="flex items-center justify-between">
             <motion.h1 
@@ -86,12 +97,12 @@ function App() {
           <div className="flex flex-col items-center justify-center py-8">
             <ClickButton />
             <p className="mt-4 text-text-muted text-center text-sm">
-              Кликай чтобы создавать <span className="text-neon-cyan">Vibe Codes</span>
+              Тапай чтобы создавать <span className="text-neon-cyan">Vibe Codes</span>
             </p>
           </div>
 
           {/* Tab navigation */}
-          <div className="sticky top-[73px] z-40 bg-dark-900/90 backdrop-blur-md -mx-4 px-4 py-2 border-b border-dark-600">
+          <div className={`sticky ${isDemoMode ? 'top-[101px]' : 'top-[73px]'} z-40 bg-dark-900/90 backdrop-blur-md -mx-4 px-4 py-2 border-b border-dark-600`}>
             <div className="flex gap-2 overflow-x-auto pb-2">
               {tabs.map((tab) => (
                 <motion.button
@@ -137,19 +148,31 @@ function App() {
       </main>
 
       {/* Footer */}
-      <footer className="fixed bottom-0 left-0 right-0 bg-dark-900/80 backdrop-blur-md border-t border-dark-600 py-2 px-4">
+      <footer className="fixed bottom-0 left-0 right-0 bg-dark-900/80 backdrop-blur-md border-t border-dark-600 py-2 px-4 z-50">
         <div className="max-w-7xl mx-auto flex items-center justify-between text-xs text-text-muted">
           <span>Vibecode-Clicker v1.0</span>
-          <button 
-            onClick={() => {
-              if (confirm('Вы уверены что хотите сбросить прогресс?')) {
-                resetGame()
-              }
-            }}
-            className="text-red-400 hover:text-red-300 transition-colors"
-          >
-            Сбросить прогресс
-          </button>
+          <div className="flex items-center gap-4">
+            <button 
+              onClick={toggleDemoMode}
+              className={`px-3 py-1 rounded transition-all font-semibold ${
+                isDemoMode 
+                  ? 'bg-neon-yellow/20 text-neon-yellow border border-neon-yellow/50' 
+                  : 'bg-dark-700 text-text-secondary hover:bg-dark-600 hover:text-text-primary'
+              }`}
+            >
+              {isDemoMode ? '🚀 DEMO ON' : 'Demo Mode'}
+            </button>
+            <button 
+              onClick={() => {
+                if (confirm('Вы уверены что хотите сбросить прогресс?')) {
+                  resetGame()
+                }
+              }}
+              className="text-red-400 hover:text-red-300 transition-colors"
+            >
+              Сбросить прогресс
+            </button>
+          </div>
         </div>
       </footer>
     </div>
