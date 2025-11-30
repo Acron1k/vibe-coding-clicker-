@@ -9,17 +9,21 @@ import { MilestonePanel } from './components/MilestonePanel'
 import { StatsPanel } from './components/StatsPanel'
 import { useGameLoop, useOfflineProgress } from './hooks/useGameLoop'
 import { useGameStore } from './store/gameStore'
+import { useAudioInit } from './hooks/useSound'
 
 type Tab = 'tools' | 'upgrades' | 'milestones' | 'stats'
 
 function App() {
   useGameLoop()
   useOfflineProgress()
+  useAudioInit()
   
   const [activeTab, setActiveTab] = useState<Tab>('tools')
   const resetGame = useGameStore((s) => s.resetGame)
   const isDemoMode = useGameStore((s) => s.isDemoMode)
   const toggleDemoMode = useGameStore((s) => s.toggleDemoMode)
+  const soundEnabled = useGameStore((s) => s.settings.soundEnabled)
+  const toggleSound = useGameStore((s) => s.toggleSound)
 
   const tabs: { id: Tab; label: string; icon: string }[] = [
     { id: 'tools', label: 'Tools', icon: '🛠️' },
@@ -136,9 +140,18 @@ function App() {
       <footer className="footer py-3 px-4">
         <div className="max-w-7xl mx-auto flex items-center justify-between text-sm">
           <span className="font-display font-semibold text-ink-500">
-            Vibecode v1.4
+            Vibecode v1.5
           </span>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
+            <button 
+              onClick={toggleSound}
+              className={`btn text-xs py-1.5 px-3 ${
+                soundEnabled ? 'btn-secondary' : 'btn-ghost'
+              }`}
+              title={soundEnabled ? 'Sound ON' : 'Sound OFF'}
+            >
+              {soundEnabled ? '🔊' : '🔇'}
+            </button>
             <button 
               onClick={toggleDemoMode}
               className={`btn text-xs py-1.5 px-3 ${

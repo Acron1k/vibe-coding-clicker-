@@ -2,6 +2,7 @@ import { useState, useCallback, useRef, memo } from 'react'
 import { useGameStore } from '../store/gameStore'
 import { formatNumber } from '../utils/formatters'
 import { useIsMobile } from '../hooks/useIsMobile'
+import { useSound } from '../hooks/useSound'
 
 interface FloatingNumber {
   id: number
@@ -45,6 +46,7 @@ export function ClickButton() {
   const idCounter = useRef(0)
   const buttonRef = useRef<HTMLDivElement>(null)
   const isMobile = useIsMobile()
+  const { playSound } = useSound()
   const maxFloating = isMobile ? MAX_FLOATING_NUMBERS_MOBILE : MAX_FLOATING_NUMBERS_DESKTOP
 
   const removeFloatingNumber = useCallback((id: number) => {
@@ -55,6 +57,13 @@ export function ClickButton() {
     const earnedValue = handleClick()
     const clickValue = getClickValue()
     const isCrit = earnedValue > clickValue
+
+    // Play appropriate sound
+    if (isCrit) {
+      playSound('crit')
+    } else {
+      playSound('click')
+    }
 
     const rect = buttonRef.current?.getBoundingClientRect()
     if (rect) {
@@ -71,7 +80,7 @@ export function ClickButton() {
         return updated
       })
     }
-  }, [handleClick, getClickValue, maxFloating])
+  }, [handleClick, getClickValue, maxFloating, playSound])
 
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
     e.preventDefault()

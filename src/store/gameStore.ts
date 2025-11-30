@@ -61,6 +61,9 @@ interface GameStore {
   // Demo mode
   toggleDemoMode: () => void
   
+  // Sound
+  toggleSound: () => void
+  
   // Reset
   resetGame: () => void
 }
@@ -101,6 +104,15 @@ export const useGameStore = create<GameStore>()(
 
       toggleDemoMode: () => {
         set((state) => ({ isDemoMode: !state.isDemoMode }))
+      },
+
+      toggleSound: () => {
+        set((state) => ({
+          settings: {
+            ...state.settings,
+            soundEnabled: !state.settings.soundEnabled,
+          },
+        }))
       },
 
       addVibeCodes: (amount) => {

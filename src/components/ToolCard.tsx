@@ -3,6 +3,7 @@ import { useGameStore } from '../store/gameStore'
 import { ToolDefinition, OwnedTool } from '../types'
 import { SUBSCRIPTIONS } from '../data/subscriptions'
 import { formatNumber, formatPerSecond } from '../utils/formatters'
+import { useSound } from '../hooks/useSound'
 
 interface ToolCardProps {
   tool: ToolDefinition
@@ -13,6 +14,7 @@ export const ToolCard = memo(function ToolCard({ tool, owned }: ToolCardProps) {
   const currencies = useGameStore((s) => s.currencies)
   const purchaseTool = useGameStore((s) => s.purchaseTool)
   const getToolCost = useGameStore((s) => s.getToolCost)
+  const { playSound } = useSound()
   
   const cost = getToolCost(tool.id)
   const canAfford = currencies.vibeCodes >= cost
@@ -22,7 +24,11 @@ export const ToolCard = memo(function ToolCard({ tool, owned }: ToolCardProps) {
   const production = tool.baseProduction * count * subscription.vbMultiplier
 
   const handlePurchase = () => {
-    purchaseTool(tool.id)
+    if (purchaseTool(tool.id)) {
+      playSound('success')
+    } else {
+      playSound('error')
+    }
   }
 
   const tierAccents = {
