@@ -1,115 +1,61 @@
-import { useEffect, useRef, useMemo } from 'react'
 import { useIsMobile } from '../hooks/useIsMobile'
 
 export function Background() {
   const isMobile = useIsMobile()
   
   return (
-    <div className="fixed inset-0 -z-10 overflow-hidden">
-      {/* Base gradient */}
-      <div className="absolute inset-0 bg-gradient-dark" />
+    <div className="fixed inset-0 -z-10 overflow-hidden bg-paper-100">
+      {/* Paper texture overlay */}
+      <div className="absolute inset-0 opacity-50 pattern-dots" />
       
-      {/* Radial glows - simplified on mobile */}
-      <div className="absolute top-0 left-1/4 w-96 h-96 bg-neon-cyan/5 rounded-full blur-3xl" />
-      <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-neon-purple/5 rounded-full blur-3xl" />
+      {/* Decorative shapes */}
       {!isMobile && (
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-neon-cyan/3 rounded-full blur-3xl" />
+        <>
+          {/* Top right coral blob */}
+          <div 
+            className="absolute -top-20 -right-20 w-96 h-96 rounded-full opacity-20"
+            style={{ background: 'radial-gradient(circle, #FF6B6B 0%, transparent 70%)' }}
+          />
+          
+          {/* Bottom left lime blob */}
+          <div 
+            className="absolute -bottom-32 -left-32 w-[500px] h-[500px] rounded-full opacity-15"
+            style={{ background: 'radial-gradient(circle, #BEFF3A 0%, transparent 70%)' }}
+          />
+          
+          {/* Center teal accent */}
+          <div 
+            className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] rounded-full opacity-5"
+            style={{ background: 'radial-gradient(circle, #2D4A5E 0%, transparent 60%)' }}
+          />
+        </>
       )}
       
-      {/* Grid */}
-      <div className="absolute inset-0 cyber-grid-animated opacity-50" />
+      {/* Subtle grid pattern */}
+      <div className="absolute inset-0 pattern-grid opacity-50" />
       
-      {/* Floating code particles - disabled on mobile for performance */}
-      {!isMobile && <MatrixRain />}
-      
-      {/* Scan line effect - desktop only, CSS animated */}
+      {/* Decorative geometric elements - desktop only */}
       {!isMobile && (
-        <div className="absolute inset-0 pointer-events-none overflow-hidden">
-          <div className="scan-line-effect absolute left-0 right-0 h-px bg-gradient-to-r from-transparent via-neon-cyan/30 to-transparent" />
-        </div>
+        <>
+          {/* Floating squares */}
+          <div 
+            className="absolute top-20 left-[10%] w-8 h-8 bg-coral-400 rounded-lg opacity-20 animate-float"
+            style={{ animationDelay: '0s' }}
+          />
+          <div 
+            className="absolute top-40 right-[15%] w-6 h-6 bg-lime-400 rounded-lg opacity-30 animate-float"
+            style={{ animationDelay: '1s' }}
+          />
+          <div 
+            className="absolute bottom-32 left-[20%] w-10 h-10 bg-teal-400 rounded-lg opacity-15 animate-float"
+            style={{ animationDelay: '2s' }}
+          />
+          <div 
+            className="absolute bottom-48 right-[25%] w-5 h-5 bg-coral-300 rounded-full opacity-25 animate-float"
+            style={{ animationDelay: '0.5s' }}
+          />
+        </>
       )}
-      
-      {/* Vignette */}
-      <div className="absolute inset-0 bg-gradient-radial from-transparent via-transparent to-dark-900/80" />
     </div>
-  )
-}
-
-function MatrixRain() {
-  const canvasRef = useRef<HTMLCanvasElement>(null)
-  const animationRef = useRef<number>()
-  const lastFrameRef = useRef<number>(0)
-  
-  const chars = useMemo(() => {
-    return '01アイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワヲン<>{}[]();:=+-*/'.split('')
-  }, [])
-
-  useEffect(() => {
-    const canvas = canvasRef.current
-    if (!canvas) return
-
-    const ctx = canvas.getContext('2d')
-    if (!ctx) return
-
-    let drops: number[] = []
-    
-    const resizeCanvas = () => {
-      canvas.width = window.innerWidth
-      canvas.height = window.innerHeight
-      
-      const fontSize = 14
-      const columns = Math.floor(canvas.width / fontSize)
-      drops = new Array(columns).fill(1)
-    }
-    resizeCanvas()
-    window.addEventListener('resize', resizeCanvas)
-
-    const fontSize = 14
-    const frameInterval = 80
-
-    const draw = (timestamp: number) => {
-      if (timestamp - lastFrameRef.current < frameInterval) {
-        animationRef.current = requestAnimationFrame(draw)
-        return
-      }
-      lastFrameRef.current = timestamp
-      
-      ctx.fillStyle = 'rgba(10, 14, 26, 0.05)'
-      ctx.fillRect(0, 0, canvas.width, canvas.height)
-
-      ctx.fillStyle = 'rgba(0, 217, 255, 0.15)'
-      ctx.font = `${fontSize}px monospace`
-
-      for (let i = 0; i < drops.length; i++) {
-        const char = chars[Math.floor(Math.random() * chars.length)]
-        const x = i * fontSize
-        const y = drops[i] * fontSize
-
-        ctx.fillText(char, x, y)
-
-        if (y > canvas.height && Math.random() > 0.975) {
-          drops[i] = 0
-        }
-        drops[i]++
-      }
-      
-      animationRef.current = requestAnimationFrame(draw)
-    }
-
-    animationRef.current = requestAnimationFrame(draw)
-
-    return () => {
-      if (animationRef.current) {
-        cancelAnimationFrame(animationRef.current)
-      }
-      window.removeEventListener('resize', resizeCanvas)
-    }
-  }, [chars])
-
-  return (
-    <canvas
-      ref={canvasRef}
-      className="absolute inset-0 opacity-30"
-    />
   )
 }

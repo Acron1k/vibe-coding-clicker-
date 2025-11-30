@@ -1,4 +1,3 @@
-import { motion } from 'framer-motion'
 import { useGameStore } from '../store/gameStore'
 import { formatNumber, formatPerSecond } from '../utils/formatters'
 
@@ -8,71 +7,60 @@ export function CurrencyDisplay() {
   const income = getPassiveIncome()
 
   return (
-    <div className="flex flex-wrap items-center justify-center gap-3 md:gap-4">
+    <div className="flex flex-wrap items-center justify-center gap-2 md:gap-3">
       {/* Vibe Codes */}
-      <motion.div 
-        className="currency-display group"
-        whileHover={{ scale: 1.02 }}
-      >
-        <div className="flex items-center gap-2">
-          <span className="text-2xl">💎</span>
-          <div className="flex flex-col">
-            <span className="currency-value text-lg md:text-xl">
-              {formatNumber(currencies.vibeCodes)}
-            </span>
-            <span className="text-xs text-text-muted">
+      <div className="currency-pill group hover:translate-y-[-2px] hover:shadow-brutal transition-all">
+        <span className="text-xl">💎</span>
+        <div className="flex flex-col">
+          <span className="currency-vb text-base md:text-lg">
+            {formatNumber(currencies.vibeCodes)}
+          </span>
+          {income.vibeCodes > 0 && (
+            <span className="text-[10px] text-ink-500 -mt-0.5">
               {formatPerSecond(income.vibeCodes)}
             </span>
-          </div>
+          )}
         </div>
-        <span className="text-xs text-text-secondary ml-2 hidden sm:inline">VB</span>
-      </motion.div>
+        <span className="text-[10px] text-ink-400 font-display font-bold hidden sm:inline">VB</span>
+      </div>
 
       {/* Dev Points */}
-      <motion.div 
-        className="currency-display group"
-        style={{ 
-          background: 'rgba(201, 4, 237, 0.05)',
-          borderColor: 'rgba(201, 4, 237, 0.2)'
-        }}
-        whileHover={{ scale: 1.02 }}
+      <div 
+        className="currency-pill group hover:translate-y-[-2px] hover:shadow-brutal transition-all"
+        style={{ borderColor: '#A855F7' }}
       >
-        <div className="flex items-center gap-2">
-          <span className="text-2xl">🔷</span>
-          <div className="flex flex-col">
-            <span className="text-lg md:text-xl font-mono font-bold" 
-                  style={{ color: '#C904ED' }}>
-              {formatNumber(currencies.devPoints)}
+        <span className="text-xl">🔮</span>
+        <div className="flex flex-col">
+          <span className="currency-dp text-base md:text-lg">
+            {formatNumber(currencies.devPoints)}
+          </span>
+          {income.devPoints > 0 && (
+            <span className="text-[10px] text-ink-500 -mt-0.5">
+              {formatPerSecond(income.devPoints)}
             </span>
-          </div>
+          )}
         </div>
-        <span className="text-xs text-text-secondary ml-2 hidden sm:inline">DP</span>
-      </motion.div>
+        <span className="text-[10px] text-ink-400 font-display font-bold hidden sm:inline">DP</span>
+      </div>
 
       {/* Prompt Tokens */}
-      <motion.div 
-        className="currency-display group"
-        style={{ 
-          background: 'rgba(255, 215, 0, 0.05)',
-          borderColor: 'rgba(255, 215, 0, 0.2)'
-        }}
-        whileHover={{ scale: 1.02 }}
+      <div 
+        className="currency-pill group hover:translate-y-[-2px] hover:shadow-brutal transition-all"
+        style={{ borderColor: '#BEFF3A' }}
       >
-        <div className="flex items-center gap-2">
-          <span className="text-2xl">🪙</span>
-          <div className="flex flex-col">
-            <span className="text-lg md:text-xl font-mono font-bold text-gradient-gold">
-              {formatNumber(currencies.promptTokens)}
+        <span className="text-xl">🪙</span>
+        <div className="flex flex-col">
+          <span className="currency-pt text-base md:text-lg">
+            {formatNumber(currencies.promptTokens)}
+          </span>
+          {income.promptTokens > 0 && (
+            <span className="text-[10px] text-ink-500 -mt-0.5">
+              {formatPerSecond(income.promptTokens)}
             </span>
-            {income.promptTokens > 0 && (
-              <span className="text-xs text-text-muted">
-                {formatPerSecond(income.promptTokens)}
-              </span>
-            )}
-          </div>
+          )}
         </div>
-        <span className="text-xs text-text-secondary ml-2 hidden sm:inline">PT</span>
-      </motion.div>
+        <span className="text-[10px] text-ink-400 font-display font-bold hidden sm:inline">PT</span>
+      </div>
     </div>
   )
 }

@@ -1,4 +1,3 @@
-import { motion } from 'framer-motion'
 import { useGameStore } from '../store/gameStore'
 import { MILESTONES } from '../data/milestones'
 import { formatNumber } from '../utils/formatters'
@@ -10,7 +9,7 @@ export function MilestonePanel() {
 
   const getProgress = (milestone: typeof MILESTONES[0]) => {
     let current = 0
-    let target = milestone.condition.value
+    const target = milestone.condition.value
 
     switch (milestone.condition.type) {
       case 'vibeCodes':
@@ -28,37 +27,35 @@ export function MilestonePanel() {
   }
 
   return (
-    <div className="glass-card rounded-xl p-4">
-      <h2 className="text-xl font-bold text-gradient mb-4">
-        Майлстоуны
-        <span className="text-sm font-normal text-text-muted ml-2">
+    <div className="card">
+      <div className="flex items-center justify-between mb-3">
+        <h2 className="text-lg font-display font-bold text-ink-800">Goals</h2>
+        <span className="text-xs font-mono bg-paper-200 px-2 py-1 rounded-lg border border-ink-200 text-ink-600">
           {completedMilestones.length}/{MILESTONES.length}
         </span>
-      </h2>
+      </div>
       
-      <div className="space-y-3">
+      <div className="space-y-2">
         {MILESTONES.map((milestone) => {
           const isCompleted = completedMilestones.includes(milestone.id)
           const progress = getProgress(milestone)
 
           return (
-            <motion.div
+            <div
               key={milestone.id}
-              className={`rounded-lg p-3 border transition-all ${
+              className={`rounded-xl p-3 border-2 transition-all ${
                 isCompleted
-                  ? 'bg-neon-green/10 border-neon-green/30'
-                  : 'bg-dark-700/50 border-dark-500'
+                  ? 'bg-lime-50 border-lime-400'
+                  : 'bg-paper-50 border-ink-200'
               }`}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
             >
-              <div className="flex items-start justify-between mb-2">
+              <div className="flex items-start justify-between mb-1">
                 <div>
-                  <h4 className="font-semibold text-sm text-text-primary flex items-center gap-2">
-                    {isCompleted && <span className="text-neon-green">✓</span>}
+                  <h4 className="font-display font-bold text-sm text-ink-800 flex items-center gap-2">
+                    {isCompleted && <span className="text-lime-600">✓</span>}
                     {milestone.name}
                   </h4>
-                  <p className="text-xs text-text-muted">{milestone.description}</p>
+                  <p className="text-[11px] text-ink-500">{milestone.description}</p>
                 </div>
               </div>
 
@@ -66,18 +63,16 @@ export function MilestonePanel() {
               {!isCompleted && (
                 <div className="mt-2">
                   <div className="progress-bar">
-                    <motion.div
-                      className="progress-bar-fill"
-                      initial={{ width: 0 }}
-                      animate={{ width: `${progress.percentage}%` }}
-                      transition={{ duration: 0.5 }}
+                    <div
+                      className="progress-fill"
+                      style={{ width: `${progress.percentage}%` }}
                     />
                   </div>
                   <div className="flex justify-between mt-1">
-                    <span className="text-xs text-text-muted">
+                    <span className="text-[10px] text-ink-500 font-mono">
                       {formatNumber(progress.current)} / {formatNumber(progress.target)}
                     </span>
-                    <span className="text-xs text-neon-cyan">
+                    <span className="text-[10px] text-coral-500 font-bold">
                       {progress.percentage.toFixed(0)}%
                     </span>
                   </div>
@@ -89,17 +84,19 @@ export function MilestonePanel() {
                 {milestone.rewards.map((reward, idx) => (
                   <span
                     key={idx}
-                    className={`text-xs px-2 py-0.5 rounded-full ${
-                      isCompleted ? 'bg-dark-600 text-text-muted' : 'bg-dark-600 text-text-secondary'
+                    className={`text-[10px] px-2 py-0.5 rounded-lg font-mono font-bold ${
+                      isCompleted 
+                        ? 'bg-ink-200 text-ink-500' 
+                        : 'bg-coral-100 text-coral-600'
                     }`}
                   >
                     +{formatNumber(reward.value)} {reward.type === 'vibeCodes' ? 'VB' : 
                       reward.type === 'devPoints' ? 'DP' : 
-                      reward.type === 'promptTokens' ? 'PT' : 'x' + reward.value}
+                      reward.type === 'promptTokens' ? 'PT' : '×' + reward.value}
                   </span>
                 ))}
               </div>
-            </motion.div>
+            </div>
           )
         })}
       </div>

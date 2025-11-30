@@ -17,8 +17,10 @@ const MAX_FLOATING_NUMBERS_MOBILE = 3
 const FloatingNumberComponent = memo(({ num, onComplete }: { num: FloatingNumber; onComplete: (id: number) => void }) => {
   return (
     <div
-      className={`floating-number absolute pointer-events-none font-bold font-mono z-20 ${
-        num.isCrit ? 'text-neon-yellow text-xl' : 'text-neon-green text-base'
+      className={`floating-number absolute pointer-events-none z-20 ${
+        num.isCrit 
+          ? 'text-lime-400 text-2xl md:text-3xl' 
+          : 'text-coral-500 text-xl md:text-2xl'
       }`}
       style={{
         left: num.x,
@@ -96,19 +98,26 @@ export function ClickButton() {
 
   return (
     <div className="relative flex items-center justify-center select-none">
-      {/* Outer glow rings - desktop only, CSS animation */}
+      {/* Decorative rings - desktop only */}
       {!isMobile && (
         <>
           <div 
-            className="absolute w-72 h-72 md:w-80 md:h-80 rounded-full opacity-20 animate-pulse pointer-events-none"
-            style={{ background: 'radial-gradient(circle, rgba(0,217,255,0.3) 0%, transparent 70%)' }} 
+            className="absolute w-72 h-72 md:w-80 md:h-80 rounded-full border-4 border-dashed border-coral-300/30 pointer-events-none animate-spin-slow"
+            style={{ animationDuration: '30s' }}
           />
           <div 
-            className="absolute w-64 h-64 md:w-72 md:h-72 rounded-full opacity-30 animate-pulse pointer-events-none"
-            style={{ background: 'radial-gradient(circle, rgba(201,4,237,0.3) 0%, transparent 70%)', animationDelay: '0.5s' }} 
+            className="absolute w-64 h-64 md:w-72 md:h-72 rounded-full border-4 border-dotted border-teal-400/20 pointer-events-none animate-spin-slow"
+            style={{ animationDuration: '25s', animationDirection: 'reverse' }}
           />
         </>
       )}
+
+      {/* Pulse ring effect */}
+      <div 
+        className={`absolute w-52 h-52 md:w-60 md:h-60 rounded-full bg-coral-400/20 pointer-events-none transition-transform duration-150 ${
+          isPressed ? 'scale-90' : 'scale-100'
+        }`}
+      />
 
       {/* Main clickable button */}
       <div
@@ -130,49 +139,45 @@ export function ClickButton() {
             }
           }
         }}
-        className={`click-button relative w-48 h-48 md:w-56 md:h-56 lg:w-64 lg:h-64 rounded-full 
-                   flex flex-col items-center justify-center gap-2 cursor-pointer
-                   border-2 border-neon-cyan/30
-                   focus:outline-none focus:ring-4 focus:ring-neon-cyan/30
-                   select-none transition-transform duration-100
-                   ${isPressed ? 'scale-95' : 'scale-100 hover:scale-105'}`}
+        className={`click-button w-44 h-44 md:w-52 md:h-52 lg:w-60 lg:h-60 ${isPressed ? 'pressed' : ''}`}
         style={{ 
           touchAction: 'manipulation',
           WebkitTapHighlightColor: 'transparent',
           WebkitTouchCallout: 'none',
           userSelect: 'none',
         }}
-        aria-label="Click to generate Vibe Codes"
+        aria-label="Click to write prompt"
       >
-        {/* Inner glow - pointer-events-none */}
-        <div className="absolute inset-4 rounded-full bg-gradient-to-br from-neon-cyan/20 to-neon-purple/20 blur-xl pointer-events-none" />
+        {/* Inner highlight */}
+        <div className="absolute inset-4 rounded-full bg-gradient-to-br from-white/30 to-transparent pointer-events-none" />
 
         {/* Icon */}
         <span className={`relative text-5xl md:text-6xl z-10 pointer-events-none ${!isMobile ? 'animate-wiggle' : ''}`}>
           ⚡
         </span>
-        <span className="relative text-xl md:text-2xl font-bold text-white z-10 tracking-wider pointer-events-none">
+        
+        {/* Text */}
+        <span className="relative text-xl md:text-2xl font-display font-bold text-white z-10 tracking-wide pointer-events-none mt-1">
           Prompt
         </span>
-        <span className="relative text-sm text-neon-cyan z-10 font-mono pointer-events-none">
+        
+        {/* Value display */}
+        <span className="relative text-sm text-white/90 z-10 font-mono font-semibold pointer-events-none mt-1 bg-teal-800/30 px-3 py-1 rounded-full">
           +{formatNumber(getClickValue())} VB
         </span>
       </div>
 
-      {/* Floating numbers - CSS animated */}
+      {/* Floating numbers */}
       {floatingNumbers.map((num) => (
         <FloatingNumberComponent key={num.id} num={num} onComplete={removeFloatingNumber} />
       ))}
 
-      {/* Decorative orbital elements - desktop only, CSS animated */}
+      {/* Decorative elements - desktop only */}
       {!isMobile && (
         <>
-          <div className="absolute w-60 h-60 md:w-68 md:h-68 lg:w-76 lg:h-76 rounded-full border border-neon-cyan/20 animate-spin-slow pointer-events-none">
-            <div className="absolute -top-1 left-1/2 w-2 h-2 bg-neon-cyan rounded-full shadow-neon-cyan" />
-          </div>
-          <div className="absolute w-68 h-68 md:w-76 md:h-76 lg:w-84 lg:h-84 rounded-full border border-neon-purple/20 animate-spin-slower pointer-events-none">
-            <div className="absolute -top-1 left-1/2 w-2 h-2 bg-neon-purple rounded-full shadow-neon-purple" />
-          </div>
+          <div className="absolute -top-4 -right-4 w-6 h-6 bg-lime-400 rounded-lg rotate-12 pointer-events-none shadow-brutal-sm animate-bounce-subtle" />
+          <div className="absolute -bottom-2 -left-6 w-5 h-5 bg-teal-500 rounded-full pointer-events-none shadow-brutal-sm animate-bounce-subtle" style={{ animationDelay: '0.5s' }} />
+          <div className="absolute top-8 -left-8 w-4 h-4 bg-coral-300 rounded-lg -rotate-12 pointer-events-none shadow-brutal-sm animate-bounce-subtle" style={{ animationDelay: '1s' }} />
         </>
       )}
     </div>

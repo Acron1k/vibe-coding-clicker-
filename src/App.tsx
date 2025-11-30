@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
 import { Background } from './components/Background'
 import { CurrencyDisplay } from './components/CurrencyDisplay'
 import { ClickButton } from './components/ClickButton'
@@ -23,37 +22,34 @@ function App() {
   const toggleDemoMode = useGameStore((s) => s.toggleDemoMode)
 
   const tabs: { id: Tab; label: string; icon: string }[] = [
-    { id: 'tools', label: 'Инструменты', icon: '🛠️' },
-    { id: 'upgrades', label: 'Апгрейды', icon: '⬆️' },
-    { id: 'milestones', label: 'Достижения', icon: '🏆' },
-    { id: 'stats', label: 'Статистика', icon: '📊' },
+    { id: 'tools', label: 'Tools', icon: '🛠️' },
+    { id: 'upgrades', label: 'Upgrades', icon: '⬆️' },
+    { id: 'milestones', label: 'Goals', icon: '🏆' },
+    { id: 'stats', label: 'Stats', icon: '📊' },
   ]
 
   return (
-    <div className="min-h-screen text-text-primary relative">
+    <div className="min-h-screen text-ink-800 relative font-body">
       <Background />
       
       {/* Demo Mode Banner */}
       {isDemoMode && (
-        <div className="fixed top-0 left-0 right-0 z-[100] bg-gradient-to-r from-neon-yellow/20 via-neon-yellow/30 to-neon-yellow/20 border-b border-neon-yellow/50 py-1 text-center">
-          <span className="text-neon-yellow font-bold text-sm animate-pulse">
-            🚀 DEMO MODE - x1,000,000 множитель активен
+        <div className="demo-banner">
+          <span className="font-display font-bold text-teal-800 text-sm">
+            🚀 DEMO MODE — x1,000,000 multiplier active!
           </span>
         </div>
       )}
       
       {/* Header */}
-      <header className={`sticky ${isDemoMode ? 'top-[28px]' : 'top-0'} z-50 backdrop-blur-md bg-dark-900/80 border-b border-dark-600`}>
+      <header className={`header ${isDemoMode ? 'top-[40px]' : ''}`}>
         <div className="max-w-7xl mx-auto px-4 py-3">
-          <div className="flex items-center justify-between">
-            <motion.h1 
-              className="text-2xl font-bold neon-text"
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-            >
-              <span className="text-gradient">Vibecode</span>
-              <span className="text-text-secondary font-light">-Clicker</span>
-            </motion.h1>
+          <div className="flex items-center justify-between gap-4">
+            <h1 className="text-xl md:text-2xl font-display font-bold tracking-tight">
+              <span className="text-gradient-coral">Vibe</span>
+              <span className="text-teal-700">code</span>
+              <span className="text-ink-400 font-normal ml-1">Clicker</span>
+            </h1>
             
             <CurrencyDisplay />
           </div>
@@ -61,29 +57,31 @@ function App() {
       </header>
 
       {/* Main content */}
-      <main className="max-w-7xl mx-auto px-4 py-6">
+      <main className={`max-w-7xl mx-auto px-4 py-6 pb-24 ${isDemoMode ? 'pt-16' : ''}`}>
         {/* Desktop Layout */}
-        <div className="hidden lg:grid lg:grid-cols-[350px_1fr_380px] gap-6">
+        <div className="hidden lg:grid lg:grid-cols-[340px_1fr_380px] gap-6">
           {/* Left: Tools */}
-          <aside className="space-y-4 max-h-[calc(100vh-140px)] overflow-y-auto pr-2">
+          <aside className="space-y-4 max-h-[calc(100vh-180px)] overflow-y-auto pr-2">
             <ToolList />
           </aside>
 
           {/* Center: Click Button */}
           <div className="flex flex-col items-center justify-center min-h-[500px]">
             <ClickButton />
-            <motion.p 
-              className="mt-6 text-text-muted text-center"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.5 }}
-            >
-              Кликни для того чтобы написать промт
-            </motion.p>
+            <p className="mt-8 text-ink-500 text-center font-body text-lg">
+              Click to write a <span className="text-coral-500 font-semibold">prompt</span>
+            </p>
+            
+            {/* Decorative element */}
+            <div className="mt-6 flex items-center gap-3">
+              <div className="w-12 h-1 bg-coral-300 rounded-full" />
+              <div className="w-3 h-3 bg-lime-400 rounded-full" />
+              <div className="w-12 h-1 bg-teal-300 rounded-full" />
+            </div>
           </div>
 
           {/* Right: Panels */}
-          <aside className="space-y-4 max-h-[calc(100vh-140px)] overflow-y-auto pl-2">
+          <aside className="space-y-4 max-h-[calc(100vh-180px)] overflow-y-auto pl-2">
             <SubscriptionPanel />
             <UpgradePanel />
             <MilestonePanel />
@@ -96,81 +94,68 @@ function App() {
           {/* Click button area */}
           <div className="flex flex-col items-center justify-center py-8">
             <ClickButton />
-            <p className="mt-4 text-text-muted text-center text-sm">
-              Тапни чтобы написать промт
+            <p className="mt-6 text-ink-500 text-center text-base">
+              Tap to write a <span className="text-coral-500 font-semibold">prompt</span>
             </p>
           </div>
 
           {/* Tab navigation */}
-          <div className={`sticky ${isDemoMode ? 'top-[101px]' : 'top-[73px]'} z-40 bg-dark-900/90 backdrop-blur-md -mx-4 px-4 py-2 border-b border-dark-600`}>
-            <div className="flex gap-2 overflow-x-auto pb-2">
+          <div className={`sticky ${isDemoMode ? 'top-[96px]' : 'top-[56px]'} z-40 bg-paper-100/95 backdrop-blur-sm -mx-4 px-4 py-3 border-y-3 border-teal-700/10`}>
+            <div className="flex gap-2 overflow-x-auto pb-1">
               {tabs.map((tab) => (
-                <motion.button
+                <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold whitespace-nowrap transition-all ${
-                    activeTab === tab.id
-                      ? 'bg-neon-cyan/20 text-neon-cyan border border-neon-cyan/30'
-                      : 'bg-dark-700 text-text-secondary hover:bg-dark-600'
+                  className={`tab-btn flex items-center gap-2 whitespace-nowrap ${
+                    activeTab === tab.id ? 'active' : ''
                   }`}
-                  whileTap={{ scale: 0.95 }}
                 >
                   <span>{tab.icon}</span>
                   <span>{tab.label}</span>
-                </motion.button>
+                </button>
               ))}
             </div>
           </div>
 
           {/* Tab content */}
-          <div className="mt-4">
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={activeTab}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                transition={{ duration: 0.2 }}
-              >
-                {activeTab === 'tools' && (
-                  <div className="space-y-4">
-                    <ToolList />
-                    <SubscriptionPanel />
-                  </div>
-                )}
-                {activeTab === 'upgrades' && <UpgradePanel />}
-                {activeTab === 'milestones' && <MilestonePanel />}
-                {activeTab === 'stats' && <StatsPanel />}
-              </motion.div>
-            </AnimatePresence>
+          <div className="mt-4 space-y-4">
+            {activeTab === 'tools' && (
+              <>
+                <ToolList />
+                <SubscriptionPanel />
+              </>
+            )}
+            {activeTab === 'upgrades' && <UpgradePanel />}
+            {activeTab === 'milestones' && <MilestonePanel />}
+            {activeTab === 'stats' && <StatsPanel />}
           </div>
         </div>
       </main>
 
       {/* Footer */}
-      <footer className="fixed bottom-0 left-0 right-0 bg-dark-900/80 backdrop-blur-md border-t border-dark-600 py-2 px-4 z-50">
-        <div className="max-w-7xl mx-auto flex items-center justify-between text-xs text-text-muted">
-          <span>Vibecode-Clicker v1.3</span>
-          <div className="flex items-center gap-4">
+      <footer className="footer py-3 px-4">
+        <div className="max-w-7xl mx-auto flex items-center justify-between text-sm">
+          <span className="font-display font-semibold text-ink-500">
+            Vibecode v1.4
+          </span>
+          <div className="flex items-center gap-3">
             <button 
               onClick={toggleDemoMode}
-              className={`px-3 py-1 rounded transition-all font-semibold ${
-                isDemoMode 
-                  ? 'bg-neon-yellow/20 text-neon-yellow border border-neon-yellow/50' 
-                  : 'bg-dark-700 text-text-secondary hover:bg-dark-600 hover:text-text-primary'
+              className={`btn text-xs py-1.5 px-3 ${
+                isDemoMode ? 'btn-lime' : 'btn-ghost'
               }`}
             >
-              {isDemoMode ? '🚀 DEMO ON' : 'Demo Mode'}
+              {isDemoMode ? '🚀 DEMO' : 'Demo'}
             </button>
             <button 
               onClick={() => {
-                if (confirm('Вы уверены что хотите сбросить прогресс?')) {
+                if (confirm('Reset all progress?')) {
                   resetGame()
                 }
               }}
-              className="text-red-400 hover:text-red-300 transition-colors"
+              className="text-coral-500 hover:text-coral-600 font-semibold transition-colors text-xs"
             >
-              Сбросить прогресс
+              Reset
             </button>
           </div>
         </div>
