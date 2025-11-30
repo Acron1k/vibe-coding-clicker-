@@ -33,20 +33,25 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
-    const { lastThreeTools, toolIndex } = req.body as { 
-      lastThreeTools: ToolInput[]
+    const { allTools, toolIndex } = req.body as { 
+      allTools: ToolInput[]
       toolIndex: number 
     }
 
-    if (!lastThreeTools || lastThreeTools.length < 1) {
-      return res.status(400).json({ error: 'lastThreeTools required' })
+    if (!allTools || allTools.length < 1) {
+      return res.status(400).json({ error: 'allTools required' })
     }
 
-    console.log(`Generating tool #${toolIndex} for user...`)
+    console.log(`Generating tool #${toolIndex} for user (${allTools.length} existing tools)...`)
 
-    const toolsList = lastThreeTools
+    // Get last 5 for context, but list ALL names to prevent duplicates
+    const lastFive = allTools.slice(-5)
+    const contextList = lastFive
       .map((t, i) => `${i + 1}. ${t.icon} ${t.name} - ${t.description}`)
       .join('\n')
+    
+    // All existing names for duplicate prevention
+    const existingNames = allTools.map(t => t.name).join(', ')
 
     // Determine tier based on tool position for progressive naming
     let tierHint: string
@@ -81,12 +86,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     const prompt = `Ты генератор названий для игры про ИИ-инструменты.
 
-Предыдущие инструменты:
-${toolsList}
+Последние 5 инструментов для контекста:
+${contextList}
 
 ${tierHint}
 
-Придумай ОДИН следующий инструмент. Название ДОЛЖНО звучать как настоящий ИИ-продукт!
+ЗАПРЕЩЁННЫЕ НАЗВАНИЯ (уже существуют, НЕ повторяй): ${existingNames}
+
+Придумай ОДИН УНИКАЛЬНЫЙ инструмент. Название ДОЛЖНО звучать как настоящий ИИ-продукт и ОТЛИЧАТЬСЯ от всех существующих!
 
 КРИТИЧЕСКИ ВАЖНО: Ответь ТОЛЬКО валидным JSON без markdown, без \`\`\`, без пояснений:
 {"name": "Название на английском (2-3 слова)", "description": "Описание на русском (до 50 символов)", "icon": "один эмодзи"}

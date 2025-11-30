@@ -1,19 +1,21 @@
-import { useMemo, useState, useEffect, useRef } from 'react'
+import { useMemo, useState, useEffect, useRef, useCallback } from 'react'
 import { useGameStore } from '../store/gameStore'
 import { 
   AI_TOOLS, 
   isAIToolUnlocked, 
   getNextLockedAITool, 
   needsNewGeneratedTool,
-  getLastNTools,
   addGeneratedTool,
   saveGeneratedTools,
-  STATIC_TOOLS_COUNT,
-  getAIToolById
+  STATIC_TOOLS_COUNT
 } from '../data/aiTools'
 import { ToolCard } from './ToolCard'
 import { formatNumber } from '../utils/formatters'
 import { generateNextTool } from '../services/toolGenerator'
+
+// Global generation lock - prevents multiple simultaneous generations
+let isGeneratingGlobal = false
+let lastGeneratedTimestamp = 0
 
 export function ToolList() {
   const ownedTools = useGameStore((s) => s.ownedTools)
@@ -21,112 +23,85 @@ export function ToolList() {
   const [generationError, setGenerationError] = useState<string | null>(null)
   const [toolsVersion, setToolsVersion] = useState(0)
   
-  // Ref to prevent double generation
-  const generationLockRef = useRef(false)
-  const lastGeneratedIndexRef = useRef(STATIC_TOOLS_COUNT)
+  // Track last known tool count to detect changes
+  const lastToolCountRef = useRef(AI_TOOLS.length)
 
-  // Check if we need to generate a new tool
-  useEffect(() => {
-    const checkAndGenerate = async () => {
-      // Already generating or locked
-      if (generationLockRef.current || isGenerating) return
-      
-      // Check if we need new tool
-      if (!needsNewGeneratedTool(ownedTools)) return
-      
-      // Calculate expected index
-      const expectedIndex = AI_TOOLS.length + 1
-      
-      // Don't regenerate same index
-      if (expectedIndex <= lastGeneratedIndexRef.current && AI_TOOLS.length > STATIC_TOOLS_COUNT) return
-      
-      // Lock generation
-      generationLockRef.current = true
-      setIsGenerating(true)
-      setGenerationError(null)
-      
-      try {
-        const lastThree = getLastNTools(3)
-        const previousTool = lastThree[lastThree.length - 1]
-        
-        // Create unique ID with timestamp
-        const uniqueId = `generated-${expectedIndex}-${Date.now()}`
-        
-        // Check if similar tool already exists
-        const existingTool = getAIToolById(`generated-${expectedIndex}`)
-        if (existingTool) {
-          console.log('Tool already exists, skipping generation')
-          return
-        }
-        
-        const newTool = await generateNextTool({
-          lastThreeTools: lastThree,
-          toolIndex: expectedIndex,
-          previousTool
-        })
-        
-        // Override ID to be unique
-        newTool.id = uniqueId
-        
-        // Double check no duplicate
-        if (!getAIToolById(uniqueId)) {
-          addGeneratedTool(newTool)
-          saveGeneratedTools()
-          lastGeneratedIndexRef.current = expectedIndex
-          setToolsVersion(v => v + 1)
-        }
-        
-      } catch (error) {
-        console.error('Generation failed:', error)
-        const errorMessage = error instanceof Error ? error.message : 'Неизвестная ошибка'
-        setGenerationError(`Ошибка: ${errorMessage}`)
-      } finally {
-        setIsGenerating(false)
-        // Delay unlock to prevent rapid re-trigger
-        setTimeout(() => {
-          generationLockRef.current = false
-        }, 1000)
-      }
+  // Generation function
+  const doGenerate = useCallback(async () => {
+    // Global lock check
+    if (isGeneratingGlobal) {
+      console.log('Generation already in progress (global lock)')
+      return false
     }
     
-    checkAndGenerate()
-  }, [ownedTools, isGenerating])
-
-  const handleRetryGeneration = async () => {
-    if (generationLockRef.current) return
+    // Prevent rapid generation (minimum 2 seconds between)
+    const now = Date.now()
+    if (now - lastGeneratedTimestamp < 2000) {
+      console.log('Too soon since last generation')
+      return false
+    }
     
-    generationLockRef.current = true
+    // Lock
+    isGeneratingGlobal = true
     setIsGenerating(true)
     setGenerationError(null)
     
     try {
-      const lastThree = getLastNTools(3)
-      const previousTool = lastThree[lastThree.length - 1]
-      const newToolIndex = AI_TOOLS.length + 1
-      const uniqueId = `generated-${newToolIndex}-${Date.now()}`
+      const toolIndex = AI_TOOLS.length + 1
+      const previousTool = AI_TOOLS[AI_TOOLS.length - 1]
+      
+      console.log(`Starting generation for tool #${toolIndex}`)
       
       const newTool = await generateNextTool({
-        lastThreeTools: lastThree,
-        toolIndex: newToolIndex,
+        allTools: [...AI_TOOLS],  // Send ALL tools
+        toolIndex,
         previousTool
       })
       
-      newTool.id = uniqueId
-      addGeneratedTool(newTool)
-      saveGeneratedTools()
-      lastGeneratedIndexRef.current = newToolIndex
-      setToolsVersion(v => v + 1)
+      // Create unique ID
+      newTool.id = `generated-${toolIndex}-${Date.now()}`
       
+      // Add tool (has internal duplicate check)
+      const added = addGeneratedTool(newTool)
+      if (added) {
+        saveGeneratedTools()
+        lastGeneratedTimestamp = Date.now()
+        lastToolCountRef.current = AI_TOOLS.length
+        setToolsVersion(v => v + 1)
+        console.log(`Successfully added tool #${toolIndex}: ${newTool.name}`)
+      }
+      
+      return added
     } catch (error) {
       console.error('Generation failed:', error)
       const errorMessage = error instanceof Error ? error.message : 'Неизвестная ошибка'
       setGenerationError(`Ошибка: ${errorMessage}`)
+      return false
     } finally {
       setIsGenerating(false)
+      // Delay unlock
       setTimeout(() => {
-        generationLockRef.current = false
-      }, 1000)
+        isGeneratingGlobal = false
+      }, 500)
     }
+  }, [])
+
+  // Check if we need to generate a new tool
+  useEffect(() => {
+    // Skip if already generating
+    if (isGeneratingGlobal || isGenerating) return
+    
+    // Check if we need new tool
+    if (!needsNewGeneratedTool(ownedTools)) return
+    
+    // Trigger generation
+    doGenerate()
+  }, [ownedTools, isGenerating, doGenerate])
+
+  const handleRetryGeneration = async () => {
+    if (isGeneratingGlobal) return
+    setGenerationError(null)
+    await doGenerate()
   }
 
   const { unlockedTools, nextTool } = useMemo(() => {

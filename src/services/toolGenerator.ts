@@ -7,7 +7,7 @@ interface GeneratedToolData {
 }
 
 interface GenerateToolParams {
-  lastThreeTools: AIToolDefinition[]
+  allTools: AIToolDefinition[]  // ALL tools for duplicate prevention
   toolIndex: number
   previousTool: AIToolDefinition
 }
@@ -17,7 +17,7 @@ interface GenerateToolParams {
  * БЕЗ FALLBACK - только реальная генерация через ИИ
  */
 export async function generateNextTool(params: GenerateToolParams): Promise<AIToolDefinition> {
-  const { lastThreeTools, toolIndex, previousTool } = params
+  const { allTools, toolIndex, previousTool } = params
 
   // Вычисляем статы на основе предыдущего инструмента
   const baseCost = Math.floor(previousTool.baseCost * 2.3)
@@ -33,7 +33,7 @@ export async function generateNextTool(params: GenerateToolParams): Promise<AITo
       'Content-Type': 'application/json'
     },
     body: JSON.stringify({
-      lastThreeTools: lastThreeTools.map(t => ({
+      allTools: allTools.map(t => ({
         name: t.name,
         description: t.description,
         icon: t.icon
