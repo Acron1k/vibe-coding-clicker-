@@ -9,6 +9,7 @@ import { StatsPanel } from './components/StatsPanel'
 import { useGameLoop, useOfflineProgress } from './hooks/useGameLoop'
 import { useGameStore } from './store/gameStore'
 import { useAudioInit } from './hooks/useSound'
+import { clearGeneratedTools, getGeneratedToolsCount } from './data/aiTools'
 
 type Tab = 'tools' | 'upgrades' | 'milestones' | 'stats'
 
@@ -133,7 +134,7 @@ function App() {
       <footer className="footer py-3 px-4">
         <div className="max-w-7xl mx-auto flex items-center justify-between text-sm">
           <span className="font-display font-semibold text-ink-500">
-            Vibecode v1.9
+            Vibecode v2.0
           </span>
           <div className="flex items-center gap-2">
             <button 
@@ -153,10 +154,26 @@ function App() {
             >
               {isDemoMode ? '🚀 DEMO' : 'Demo'}
             </button>
+            {getGeneratedToolsCount() > 0 && (
+              <button 
+                onClick={() => {
+                  if (confirm('Очистить сгенерированные ИИ инструменты?')) {
+                    clearGeneratedTools()
+                    window.location.reload()
+                  }
+                }}
+                className="text-purple-500 hover:text-purple-600 font-semibold transition-colors text-xs"
+                title="Очистить сгенерированные инструменты"
+              >
+                🗑️ AI ({getGeneratedToolsCount()})
+              </button>
+            )}
             <button 
               onClick={() => {
                 if (confirm('Сбросить весь прогресс?')) {
                   resetGame()
+                  clearGeneratedTools()
+                  window.location.reload()
                 }
               }}
               className="text-coral-500 hover:text-coral-600 font-semibold transition-colors text-xs"

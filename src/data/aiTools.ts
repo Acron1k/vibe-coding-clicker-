@@ -12,14 +12,15 @@ export interface AIToolDefinition extends ToolDefinition {
   dpGeneration?: number
 }
 
+// Версия данных - увеличивать при изменении структуры
+const DATA_VERSION = 2
+
 // Количество статичных инструментов
 export const STATIC_TOOLS_COUNT = 18
 
 // Статичные инструменты (1-18)
 export const STATIC_AI_TOOLS: AIToolDefinition[] = [
-  // ============================================
-  // TIER 1 - БАЗОВЫЕ (реальные инструменты)
-  // ============================================
+  // TIER 1 - БАЗОВЫЕ
   {
     id: 'chatgpt',
     name: 'ChatGPT',
@@ -88,9 +89,7 @@ export const STATIC_AI_TOOLS: AIToolDefinition[] = [
     ptGeneration: 0.5,
   },
   
-  // ============================================
   // TIER 2 - ПРОДВИНУТЫЕ
-  // ============================================
   {
     id: 'midjourney',
     name: 'Midjourney',
@@ -178,9 +177,7 @@ export const STATIC_AI_TOOLS: AIToolDefinition[] = [
     dpGeneration: 1.2,
   },
   
-  // ============================================
   // TIER 3 - ПРЕМИУМ (последние 3 статичных)
-  // ============================================
   {
     id: 'gpt5',
     name: 'GPT-5',
@@ -224,24 +221,56 @@ export function addGeneratedTool(tool: AIToolDefinition): void {
   AI_TOOLS = [...AI_TOOLS, tool]
 }
 
+// Очистить сгенерированные инструменты
+export function clearGeneratedTools(): void {
+  AI_TOOLS = [...STATIC_AI_TOOLS]
+  localStorage.removeItem('vibecode-generated-tools')
+  localStorage.removeItem('vibecode-tools-version')
+}
+
 // Загрузить сгенерированные инструменты из localStorage
 export function loadGeneratedTools(): void {
   try {
+    // Проверяем версию данных
+    const savedVersion = localStorage.getItem('vibecode-tools-version')
+    if (savedVersion !== String(DATA_VERSION)) {
+      // Версия изменилась - очищаем старые данные
+      console.log('Data version changed, clearing old generated tools')
+      localStorage.removeItem('vibecode-generated-tools')
+      localStorage.setItem('vibecode-tools-version', String(DATA_VERSION))
+      return
+    }
+
     const saved = localStorage.getItem('vibecode-generated-tools')
     if (saved) {
       const tools: AIToolDefinition[] = JSON.parse(saved)
-      AI_TOOLS = [...STATIC_AI_TOOLS, ...tools]
+      
+      // Валидация - проверяем что инструменты имеют правильный формат
+      const validTools = tools.filter(tool => 
+        tool.id?.startsWith('generated-') &&
+        typeof tool.name === 'string' &&
+        typeof tool.baseCost === 'number' &&
+        typeof tool.baseProduction === 'number'
+      )
+      
+      if (validTools.length > 0) {
+        AI_TOOLS = [...STATIC_AI_TOOLS, ...validTools]
+        console.log(`Loaded ${validTools.length} generated tools`)
+      }
     }
   } catch (e) {
     console.error('Failed to load generated tools:', e)
+    // При ошибке очищаем
+    localStorage.removeItem('vibecode-generated-tools')
   }
 }
 
 // Сохранить сгенерированные инструменты в localStorage
 export function saveGeneratedTools(): void {
   try {
-    const generatedOnly = AI_TOOLS.slice(STATIC_TOOLS_COUNT)
+    const generatedOnly = AI_TOOLS.filter(t => t.id.startsWith('generated-'))
     localStorage.setItem('vibecode-generated-tools', JSON.stringify(generatedOnly))
+    localStorage.setItem('vibecode-tools-version', String(DATA_VERSION))
   } catch (e) {
     console.error('Failed to save generated tools:', e)
   }
@@ -279,14 +308,25 @@ export function getNextLockedAITool(ownedTools: Record<string, { count: number }
 
 // Проверить, нужно ли генерировать новый инструмент
 export function needsNewGeneratedTool(ownedTools: Record<string, { count: number }>): boolean {
-  const ownedCount = Object.keys(ownedTools).length
-  // Генерируем новый если купили все доступные и их >= 18
-  return ownedCount >= AI_TOOLS.length && ownedCount >= STATIC_TOOLS_COUNT
+  // Считаем сколько инструментов из текущего списка куплено
+  const ownedFromCurrentList = AI_TOOLS.filter(tool => 
+    ownedTools[tool.id]?.count > 0
+  ).length
+  
+  // Генерируем новый если:
+  // 1. Куплены все текущие инструменты
+  // 2. И их не меньше чем статичных (18)
+  return ownedFromCurrentList >= AI_TOOLS.length && ownedFromCurrentList >= STATIC_TOOLS_COUNT
 }
 
 // Получить последние N инструментов
 export function getLastNTools(n: number): AIToolDefinition[] {
   return AI_TOOLS.slice(-n)
+}
+
+// Получить количество сгенерированных инструментов
+export function getGeneratedToolsCount(): number {
+  return AI_TOOLS.filter(t => t.id.startsWith('generated-')).length
 }
 
 // Инициализация - загружаем сохранённые инструменты
