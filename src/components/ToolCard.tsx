@@ -1,18 +1,20 @@
 import { memo } from 'react'
 import { useGameStore } from '../store/gameStore'
-import { ToolDefinition, OwnedTool } from '../types'
-import { SUBSCRIPTIONS } from '../data/subscriptions'
+import { OwnedTool } from '../types'
+import { AIToolDefinition } from '../data/aiTools'
+import { SUBSCRIPTIONS, getNextTier } from '../data/subscriptions'
 import { formatNumber, formatPerSecond } from '../utils/formatters'
 import { useSound } from '../hooks/useSound'
 
 interface ToolCardProps {
-  tool: ToolDefinition
+  tool: AIToolDefinition
   owned?: OwnedTool
 }
 
 export const ToolCard = memo(function ToolCard({ tool, owned }: ToolCardProps) {
   const currencies = useGameStore((s) => s.currencies)
   const purchaseTool = useGameStore((s) => s.purchaseTool)
+  const upgradeSubscription = useGameStore((s) => s.upgradeSubscription)
   const getToolCost = useGameStore((s) => s.getToolCost)
   const { playSound } = useSound()
   
@@ -22,9 +24,24 @@ export const ToolCard = memo(function ToolCard({ tool, owned }: ToolCardProps) {
   const subscription = owned ? SUBSCRIPTIONS[owned.subscriptionTier] : SUBSCRIPTIONS.free
   
   const production = tool.baseProduction * count * subscription.vbMultiplier
+  const ptProduction = ((tool.ptGeneration || 0) + subscription.ptBonus) * count
+  const dpProduction = (tool.dpGeneration || 0) * count
+
+  // Subscription upgrade info
+  const nextTier = owned ? getNextTier(owned.subscriptionTier) : null
+  const nextSub = nextTier ? SUBSCRIPTIONS[nextTier] : null
+  const canUpgradeSub = nextSub && currencies.devPoints >= nextSub.dpCost
 
   const handlePurchase = () => {
     if (purchaseTool(tool.id)) {
+      playSound('success')
+    } else {
+      playSound('error')
+    }
+  }
+
+  const handleUpgradeSub = () => {
+    if (upgradeSubscription(tool.id)) {
       playSound('success')
     } else {
       playSound('error')
@@ -45,10 +62,10 @@ export const ToolCard = memo(function ToolCard({ tool, owned }: ToolCardProps) {
       style={{ borderColor: count > 0 ? accent.border : undefined }}
     >
       {/* Header */}
-      <div className="flex items-start justify-between mb-3">
+      <div className="flex items-start justify-between mb-2">
         <div className="flex items-center gap-3">
           <div 
-            className="w-11 h-11 rounded-xl flex items-center justify-center text-2xl bg-white border-2 shadow-brutal-sm"
+            className="w-10 h-10 rounded-xl flex items-center justify-center text-xl bg-white border-2 shadow-brutal-sm"
             style={{ borderColor: accent.border }}
           >
             {tool.icon}
@@ -65,7 +82,7 @@ export const ToolCard = memo(function ToolCard({ tool, owned }: ToolCardProps) {
                 </span>
               )}
             </h3>
-            <p className="text-xs text-ink-500 mt-0.5">{tool.description}</p>
+            <p className="text-[11px] text-ink-500">{tool.description}</p>
           </div>
         </div>
         
@@ -78,17 +95,31 @@ export const ToolCard = memo(function ToolCard({ tool, owned }: ToolCardProps) {
       </div>
 
       {/* Stats */}
-      <div className="flex items-center gap-3 text-xs mb-3">
-        <div className="flex items-center gap-1.5 bg-white/80 px-2 py-1 rounded-lg">
-          <span className="text-ink-500">Даёт:</span>
+      <div className="flex flex-wrap items-center gap-1.5 text-[10px] mb-2">
+        <div className="flex items-center gap-1 bg-white/80 px-2 py-0.5 rounded-lg">
+          <span className="text-ink-500">VB:</span>
           <span className="text-coral-600 font-mono font-bold">
             {count > 0 ? formatPerSecond(production) : formatPerSecond(tool.baseProduction)}
           </span>
         </div>
-        {subscription.ptBonus > 0 && count > 0 && (
-          <div className="flex items-center gap-1 bg-lime-100 px-2 py-1 rounded-lg">
-            <span className="text-teal-700 font-mono font-bold">
-              +{formatPerSecond(subscription.ptBonus * count)} PT
+        {(tool.ptGeneration || 0) > 0 && (
+          <div className="flex items-center gap-1 bg-teal-50 px-2 py-0.5 rounded-lg">
+            <span className="text-teal-600 font-mono font-bold">
+              +{count > 0 ? formatPerSecond(ptProduction) : formatPerSecond(tool.ptGeneration || 0)} PT
+            </span>
+          </div>
+        )}
+        {(tool.dpGeneration || 0) > 0 && (
+          <div className="flex items-center gap-1 bg-purple-50 px-2 py-0.5 rounded-lg">
+            <span className="text-purple-600 font-mono font-bold">
+              +{count > 0 ? formatPerSecond(dpProduction) : formatPerSecond(tool.dpGeneration || 0)} DP
+            </span>
+          </div>
+        )}
+        {subscription.vbMultiplier > 1 && count > 0 && (
+          <div className="flex items-center gap-1 bg-lime-100 px-2 py-0.5 rounded-lg">
+            <span className="text-lime-700 font-mono font-bold">
+              ×{subscription.vbMultiplier}
             </span>
           </div>
         )}
@@ -114,6 +145,36 @@ export const ToolCard = memo(function ToolCard({ tool, owned }: ToolCardProps) {
           <span className="font-mono">{formatNumber(cost)} VB</span>
         </span>
       </button>
+
+      {/* Subscription upgrade section - only show if tool is owned */}
+      {owned && count > 0 && (
+        <div className="mt-2 pt-2 border-t border-ink-200/50">
+          {nextSub ? (
+            <button
+              onClick={handleUpgradeSub}
+              disabled={!canUpgradeSub}
+              className="w-full py-1.5 px-2 rounded-lg text-[11px] font-display font-bold flex items-center justify-between transition-all"
+              style={canUpgradeSub ? { 
+                background: 'linear-gradient(135deg, #A855F7 0%, #EC4899 100%)', 
+                color: 'white',
+                border: '2px solid #7C3AED',
+                boxShadow: '2px 2px 0px 0px #7C3AED'
+              } : { 
+                background: '#F3F4F6', 
+                color: '#9CA3AF',
+                border: '2px solid #E5E7EB',
+              }}
+            >
+              <span>⬆️ До {nextSub.displayName}</span>
+              <span className="font-mono">🔮 {nextSub.dpCost} DP</span>
+            </button>
+          ) : (
+            <div className="text-center py-1 text-lime-600 text-[11px] font-display font-bold bg-lime-50 rounded-lg">
+              ✨ Максимум!
+            </div>
+          )}
+        </div>
+      )}
     </div>
   )
 })

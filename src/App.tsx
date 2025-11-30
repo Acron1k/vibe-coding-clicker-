@@ -3,7 +3,6 @@ import { Background } from './components/Background'
 import { CurrencyDisplay } from './components/CurrencyDisplay'
 import { ClickButton } from './components/ClickButton'
 import { ToolList } from './components/ToolList'
-import { SubscriptionPanel } from './components/SubscriptionPanel'
 import { UpgradePanel } from './components/UpgradePanel'
 import { MilestonePanel } from './components/MilestonePanel'
 import { StatsPanel } from './components/StatsPanel'
@@ -86,7 +85,6 @@ function App() {
 
           {/* Right: Panels */}
           <aside className="space-y-4 max-h-[calc(100vh-180px)] overflow-y-auto pl-2">
-            <SubscriptionPanel />
             <UpgradePanel />
             <MilestonePanel />
             <StatsPanel />
@@ -123,12 +121,7 @@ function App() {
 
           {/* Tab content */}
           <div className="mt-4 space-y-4">
-            {activeTab === 'tools' && (
-              <>
-                <ToolList />
-                <SubscriptionPanel />
-              </>
-            )}
+            {activeTab === 'tools' && <ToolList />}
             {activeTab === 'upgrades' && <UpgradePanel />}
             {activeTab === 'milestones' && <MilestonePanel />}
             {activeTab === 'stats' && <StatsPanel />}
@@ -140,7 +133,7 @@ function App() {
       <footer className="footer py-3 px-4">
         <div className="max-w-7xl mx-auto flex items-center justify-between text-sm">
           <span className="font-display font-semibold text-ink-500">
-            Vibecode v1.7
+            Vibecode v1.8
           </span>
           <div className="flex items-center gap-2">
             <button 
