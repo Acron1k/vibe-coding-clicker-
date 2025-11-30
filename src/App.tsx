@@ -61,16 +61,16 @@ function App() {
       </header>
 
       {/* Main content */}
-      <main className={`max-w-7xl mx-auto px-4 py-6 pb-24 ${isDemoMode ? 'pt-16' : ''}`}>
+      <main className={`max-w-7xl mx-auto px-4 pt-6 pb-20 ${isDemoMode ? 'pt-16' : ''}`}>
         {/* Desktop Layout */}
         <div className="hidden lg:grid lg:grid-cols-[340px_1fr_380px] gap-6">
           {/* Left: Tools */}
-          <aside className="space-y-4 max-h-[calc(100vh-180px)] overflow-y-auto pr-2">
+          <aside className="space-y-4 h-[calc(100vh-160px)] overflow-y-auto pr-2 pb-4 sticky top-[76px]">
             <ToolList />
           </aside>
 
           {/* Center: Click Button */}
-          <div className="flex flex-col items-center justify-center min-h-[500px]">
+          <div className="flex flex-col items-center justify-center min-h-[400px] sticky top-[76px]">
             <ClickButton />
             <p className="mt-8 text-ink-500 text-center font-body text-lg">
               Кликай чтобы писать <span className="text-coral-500 font-semibold">промпты</span>
@@ -85,7 +85,7 @@ function App() {
           </div>
 
           {/* Right: Panels */}
-          <aside className="space-y-4 max-h-[calc(100vh-180px)] overflow-y-auto pl-2">
+          <aside className="space-y-4 h-[calc(100vh-160px)] overflow-y-auto pl-2 pb-4 sticky top-[76px]">
             <UpgradePanel />
             <MilestonePanel />
             <StatsPanel />
@@ -134,7 +134,7 @@ function App() {
       <footer className="footer py-3 px-4">
         <div className="max-w-7xl mx-auto flex items-center justify-between text-sm">
           <span className="font-display font-semibold text-ink-500">
-            Vibecode v2.0
+            Vibecode v2.1
           </span>
           <div className="flex items-center gap-2">
             <button 
