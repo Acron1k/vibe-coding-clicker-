@@ -89,6 +89,21 @@ export interface OwnedUpgrade {
   purchasedAt: number
 }
 
+// === INFINITE UPGRADES ===
+export type InfiniteUpgradeCurrency = 'vibeCodes' | 'devPoints'
+
+export interface InfiniteUpgradeDefinition {
+  id: string
+  name: string
+  description: string
+  effectPerLevel: string
+  baseCost: number
+  growthRate: number
+  currency: InfiniteUpgradeCurrency
+  maxLevel?: number
+  icon: string
+}
+
 // === MILESTONES ===
 export interface MilestoneDefinition {
   id: string

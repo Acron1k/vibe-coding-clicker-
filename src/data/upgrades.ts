@@ -1,4 +1,4 @@
-import { UpgradeDefinition } from '../types'
+import { UpgradeDefinition, InfiniteUpgradeDefinition } from '../types'
 
 export const UPGRADES: UpgradeDefinition[] = [
   // === Click Upgrades ===
@@ -113,4 +113,68 @@ export const getUpgradeById = (id: string): UpgradeDefinition | undefined => {
 
 export const getUpgradesByCategory = (category: string): UpgradeDefinition[] => {
   return UPGRADES.filter(u => u.category === category)
+}
+
+// === INFINITE UPGRADES ===
+export const INFINITE_UPGRADES: InfiniteUpgradeDefinition[] = [
+  {
+    id: 'click-power',
+    name: 'Click Power',
+    description: '+1 к базовому клику за уровень',
+    effectPerLevel: '+1 клик',
+    baseCost: 100,
+    growthRate: 1.15,
+    currency: 'vibeCodes',
+    icon: '👆',
+  },
+  {
+    id: 'production-boost',
+    name: 'Production Boost',
+    description: '+10% к производству за уровень',
+    effectPerLevel: '+10% производства',
+    baseCost: 500,
+    growthRate: 1.20,
+    currency: 'vibeCodes',
+    icon: '📈',
+  },
+  {
+    id: 'dp-generator',
+    name: 'DP Generator',
+    description: '+0.1 DevPoints в секунду за уровень',
+    effectPerLevel: '+0.1 DP/сек',
+    baseCost: 25,
+    growthRate: 1.25,
+    currency: 'devPoints',
+    icon: '💎',
+  },
+  {
+    id: 'crit-master',
+    name: 'Crit Master',
+    description: '+0.5% шанс критического удара за уровень',
+    effectPerLevel: '+0.5% крит',
+    baseCost: 100,
+    growthRate: 1.30,
+    currency: 'devPoints',
+    maxLevel: 50,
+    icon: '🎯',
+  },
+  {
+    id: 'offline-gains',
+    name: 'Offline Gains',
+    description: '+5% к оффлайн доходу за уровень',
+    effectPerLevel: '+5% оффлайн',
+    baseCost: 50,
+    growthRate: 1.18,
+    currency: 'devPoints',
+    maxLevel: 100,
+    icon: '🌙',
+  },
+]
+
+export const getInfiniteUpgradeById = (id: string): InfiniteUpgradeDefinition | undefined => {
+  return INFINITE_UPGRADES.find(u => u.id === id)
+}
+
+export const getInfiniteUpgradeCost = (upgrade: InfiniteUpgradeDefinition, currentLevel: number): number => {
+  return Math.floor(upgrade.baseCost * Math.pow(upgrade.growthRate, currentLevel))
 }

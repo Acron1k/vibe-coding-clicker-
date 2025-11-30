@@ -3,10 +3,12 @@ import { persist } from 'zustand/middleware'
 import { Currencies, PlayerStats, GameSettings, OwnedTool } from '../types'
 import { TOOLS, COST_MULTIPLIER, getToolById } from '../data/tools'
 import { SUBSCRIPTIONS, getNextTier } from '../data/subscriptions'
-import { getUpgradeById } from '../data/upgrades'
+import { getUpgradeById, getInfiniteUpgradeById, getInfiniteUpgradeCost } from '../data/upgrades'
 import { MILESTONES } from '../data/milestones'
 
 const DEMO_MULTIPLIER = 1_000_000
+const DP_PER_CLICK_BASE = 0.01
+const PT_TO_DP_RATE = 1000
 
 interface GameStore {
   // State
@@ -15,6 +17,7 @@ interface GameStore {
   settings: GameSettings
   ownedTools: Record<string, OwnedTool>
   ownedUpgrades: string[]
+  infiniteUpgrades: Record<string, number>
   completedMilestones: string[]
   unlockedTools: string[]
   isDemoMode: boolean
@@ -35,12 +38,16 @@ interface GameStore {
   
   // Upgrade actions
   purchaseUpgrade: (upgradeId: string) => boolean
+  purchaseInfiniteUpgrade: (upgradeId: string) => boolean
+  getInfiniteUpgradeLevel: (upgradeId: string) => number
+  getInfiniteUpgradeCost: (upgradeId: string) => number
   
   // Calculations
   getToolCost: (toolId: string) => number
   getClickValue: () => number
-  getPassiveIncome: () => { vibeCodes: number; promptTokens: number }
+  getPassiveIncome: () => { vibeCodes: number; promptTokens: number; devPoints: number }
   getTotalToolCount: () => number
+  getCritChance: () => number
   
   // Milestone checking
   checkMilestones: () => void
@@ -87,6 +94,7 @@ export const useGameStore = create<GameStore>()(
       settings: initialSettings,
       ownedTools: {},
       ownedUpgrades: [],
+      infiniteUpgrades: {},
       completedMilestones: [],
       unlockedTools: ['claude-baseline'],
       isDemoMode: false,
@@ -155,31 +163,31 @@ export const useGameStore = create<GameStore>()(
       },
 
       handleClick: () => {
-        const { isDemoMode } = get()
+        const { isDemoMode, ownedTools } = get()
         const baseClickValue = get().getClickValue()
         const demoMultiplier = isDemoMode ? DEMO_MULTIPLIER : 1
         
-        // Check for crit from ultra subscriptions
-        const { ownedTools } = get()
+        // Check for crit
+        const critChance = get().getCritChance()
         let critMultiplier = 1
-        Object.values(ownedTools).forEach((tool) => {
-          const sub = SUBSCRIPTIONS[tool.subscriptionTier]
-          if (Math.random() < sub.critChance) {
-            critMultiplier = 2
-          }
-        })
+        if (Math.random() < critChance) {
+          critMultiplier = 2
+        }
         
         const finalValue = baseClickValue * critMultiplier * demoMultiplier
         
-        // Also add dev points and prompt tokens in demo mode
-        const devPointsBonus = isDemoMode ? 10000 : 0
+        // Calculate DP earned from click
+        const toolCount = Object.keys(ownedTools).length
+        const dpFromClick = isDemoMode ? 10000 : (DP_PER_CLICK_BASE * (1 + toolCount * 0.1))
+        
+        // Prompt tokens bonus in demo mode
         const promptTokensBonus = isDemoMode ? 10000 : 0
         
         set((state) => ({
           currencies: {
             ...state.currencies,
             vibeCodes: state.currencies.vibeCodes + finalValue,
-            devPoints: state.currencies.devPoints + devPointsBonus,
+            devPoints: state.currencies.devPoints + dpFromClick,
             promptTokens: state.currencies.promptTokens + promptTokensBonus,
           },
           stats: {
@@ -262,6 +270,46 @@ export const useGameStore = create<GameStore>()(
         return true
       },
 
+      purchaseInfiniteUpgrade: (upgradeId) => {
+        const upgrade = getInfiniteUpgradeById(upgradeId)
+        if (!upgrade) return false
+        
+        const currentLevel = get().getInfiniteUpgradeLevel(upgradeId)
+        
+        // Check max level
+        if (upgrade.maxLevel && currentLevel >= upgrade.maxLevel) return false
+        
+        const cost = get().getInfiniteUpgradeCost(upgradeId)
+        
+        // Spend the correct currency
+        if (upgrade.currency === 'vibeCodes') {
+          if (!get().spendVibeCodes(cost)) return false
+        } else {
+          if (!get().spendDevPoints(cost)) return false
+        }
+        
+        set((state) => ({
+          infiniteUpgrades: {
+            ...state.infiniteUpgrades,
+            [upgradeId]: currentLevel + 1,
+          },
+        }))
+        
+        return true
+      },
+
+      getInfiniteUpgradeLevel: (upgradeId) => {
+        return get().infiniteUpgrades[upgradeId] || 0
+      },
+
+      getInfiniteUpgradeCost: (upgradeId) => {
+        const upgrade = getInfiniteUpgradeById(upgradeId)
+        if (!upgrade) return Infinity
+        
+        const currentLevel = get().getInfiniteUpgradeLevel(upgradeId)
+        return getInfiniteUpgradeCost(upgrade, currentLevel)
+      },
+
       getToolCost: (toolId) => {
         const tool = getToolById(toolId)
         if (!tool) return Infinity
@@ -272,13 +320,34 @@ export const useGameStore = create<GameStore>()(
         return Math.floor(tool.baseCost * Math.pow(COST_MULTIPLIER, count))
       },
 
+      getCritChance: () => {
+        const { ownedTools, infiniteUpgrades } = get()
+        let critChance = 0
+        
+        // From subscriptions
+        Object.values(ownedTools).forEach((tool) => {
+          const sub = SUBSCRIPTIONS[tool.subscriptionTier]
+          critChance += sub.critChance
+        })
+        
+        // From infinite upgrade (crit-master: +0.5% per level)
+        const critLevel = infiniteUpgrades['crit-master'] || 0
+        critChance += critLevel * 0.005
+        
+        return Math.min(critChance, 0.5) // Cap at 50%
+      },
+
       getClickValue: () => {
-        const { ownedUpgrades, stats } = get()
-        let baseClick = 1
+        const { ownedUpgrades, stats, infiniteUpgrades } = get()
+        
+        // Base click from infinite upgrade (click-power: +1 per level)
+        const clickPowerLevel = infiniteUpgrades['click-power'] || 0
+        let baseClick = 1 + clickPowerLevel
+        
         let additiveBonus = 0
         let multiplicativeBonus = 1
         
-        // Apply upgrades
+        // Apply one-time upgrades
         ownedUpgrades.forEach((upgradeId) => {
           const upgrade = getUpgradeById(upgradeId)
           if (upgrade && upgrade.effect.type === 'clickMultiplier') {
@@ -293,14 +362,16 @@ export const useGameStore = create<GameStore>()(
         // Apply prestige bonus
         const prestigeBonus = 1 + stats.projectTokens * 0.1
         
-        return Math.floor(baseClick * (1 + additiveBonus) * multiplicativeBonus * prestigeBonus)
+        const result = baseClick * (1 + additiveBonus) * multiplicativeBonus * prestigeBonus
+        return Math.max(1, Math.round(result))
       },
 
       getPassiveIncome: () => {
-        const { ownedTools, ownedUpgrades, stats, isDemoMode } = get()
+        const { ownedTools, ownedUpgrades, stats, isDemoMode, infiniteUpgrades } = get()
         const demoMultiplier = isDemoMode ? DEMO_MULTIPLIER : 1
         let totalVB = 0
         let totalPT = 0
+        let totalDP = 0
         
         // Calculate base production from tools
         Object.values(ownedTools).forEach((owned) => {
@@ -310,9 +381,16 @@ export const useGameStore = create<GameStore>()(
           const sub = SUBSCRIPTIONS[owned.subscriptionTier]
           totalVB += toolDef.baseProduction * owned.count * sub.vbMultiplier
           totalPT += sub.ptBonus * owned.count
+          
+          // DP from high-tier subscriptions
+          if (sub.tier === 'max') {
+            totalDP += 0.1 * owned.count
+          } else if (sub.tier === 'ultra') {
+            totalDP += 0.3 * owned.count
+          }
         })
         
-        // Apply production upgrades
+        // Apply production upgrades (one-time)
         let additiveBonus = 0
         let multiplicativeBonus = 1
         
@@ -327,12 +405,21 @@ export const useGameStore = create<GameStore>()(
           }
         })
         
+        // Apply infinite production boost (+10% per level)
+        const prodBoostLevel = infiniteUpgrades['production-boost'] || 0
+        additiveBonus += prodBoostLevel * 0.10
+        
+        // Apply DP generator (+0.1 DP/sec per level)
+        const dpGenLevel = infiniteUpgrades['dp-generator'] || 0
+        totalDP += dpGenLevel * 0.1
+        
         // Apply prestige bonus
         const prestigeBonus = 1 + stats.projectTokens * 0.1
         
         return {
           vibeCodes: totalVB * (1 + additiveBonus) * multiplicativeBonus * prestigeBonus * demoMultiplier,
           promptTokens: totalPT * demoMultiplier,
+          devPoints: totalDP * demoMultiplier,
         }
       },
 
@@ -363,7 +450,6 @@ export const useGameStore = create<GameStore>()(
           }
           
           if (conditionMet) {
-            // Award rewards
             milestone.rewards.forEach((reward) => {
               switch (reward.type) {
                 case 'vibeCodes':
@@ -387,31 +473,48 @@ export const useGameStore = create<GameStore>()(
 
       tick: (deltaSeconds) => {
         const income = get().getPassiveIncome()
+        const { currencies } = get()
         
+        let newVB = currencies.vibeCodes
+        let newPT = currencies.promptTokens
+        let newDP = currencies.devPoints
+        let vbEarned = 0
+        
+        // VibeCodes income
         if (income.vibeCodes > 0) {
-          const vbEarned = income.vibeCodes * deltaSeconds
-          set((state) => ({
-            currencies: {
-              ...state.currencies,
-              vibeCodes: state.currencies.vibeCodes + vbEarned,
-            },
-            stats: {
-              ...state.stats,
-              totalVibeCodesEarned: state.stats.totalVibeCodesEarned + vbEarned,
-              playTime: state.stats.playTime + deltaSeconds,
-            },
-          }))
+          vbEarned = income.vibeCodes * deltaSeconds
+          newVB += vbEarned
         }
         
+        // PromptTokens income
         if (income.promptTokens > 0) {
-          const ptEarned = income.promptTokens * deltaSeconds
-          set((state) => ({
-            currencies: {
-              ...state.currencies,
-              promptTokens: state.currencies.promptTokens + ptEarned,
-            },
-          }))
+          newPT += income.promptTokens * deltaSeconds
         }
+        
+        // DevPoints income
+        if (income.devPoints > 0) {
+          newDP += income.devPoints * deltaSeconds
+        }
+        
+        // Convert PromptTokens to DevPoints (1000 PT = 1 DP)
+        if (newPT >= PT_TO_DP_RATE) {
+          const dpFromPT = Math.floor(newPT / PT_TO_DP_RATE)
+          newDP += dpFromPT
+          newPT -= dpFromPT * PT_TO_DP_RATE
+        }
+        
+        set((state) => ({
+          currencies: {
+            vibeCodes: newVB,
+            promptTokens: newPT,
+            devPoints: newDP,
+          },
+          stats: {
+            ...state.stats,
+            totalVibeCodesEarned: state.stats.totalVibeCodesEarned + vbEarned,
+            playTime: state.stats.playTime + deltaSeconds,
+          },
+        }))
         
         get().checkToolUnlocks()
         get().checkMilestones()
@@ -459,6 +562,7 @@ export const useGameStore = create<GameStore>()(
           settings: initialSettings,
           ownedTools: {},
           ownedUpgrades: [],
+          infiniteUpgrades: {},
           completedMilestones: [],
           unlockedTools: ['claude-baseline'],
           isDemoMode: false,
@@ -473,9 +577,9 @@ export const useGameStore = create<GameStore>()(
         settings: state.settings,
         ownedTools: state.ownedTools,
         ownedUpgrades: state.ownedUpgrades,
+        infiniteUpgrades: state.infiniteUpgrades,
         completedMilestones: state.completedMilestones,
         unlockedTools: state.unlockedTools,
-        // isDemoMode is NOT persisted - always starts as false
       }),
     }
   )
