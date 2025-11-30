@@ -90,7 +90,7 @@ export interface OwnedUpgrade {
 }
 
 // === INFINITE UPGRADES ===
-export type InfiniteUpgradeCurrency = 'vibeCodes' | 'devPoints'
+export type InfiniteUpgradeCurrency = 'vibeCodes' | 'devPoints' | 'promptTokens'
 
 export interface InfiniteUpgradeDefinition {
   id: string

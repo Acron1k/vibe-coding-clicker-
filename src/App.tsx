@@ -140,7 +140,7 @@ function App() {
       <footer className="footer py-3 px-4">
         <div className="max-w-7xl mx-auto flex items-center justify-between text-sm">
           <span className="font-display font-semibold text-ink-500">
-            Vibecode v1.5
+            Vibecode v1.7
           </span>
           <div className="flex items-center gap-2">
             <button 

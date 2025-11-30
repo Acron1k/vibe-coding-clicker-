@@ -1,14 +1,13 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { Currencies, PlayerStats, GameSettings, OwnedTool } from '../types'
-import { COST_MULTIPLIER, getToolById } from '../data/tools'
+import { COST_MULTIPLIER } from '../data/tools'
+import { getAIToolById } from '../data/aiTools'
 import { SUBSCRIPTIONS, getNextTier } from '../data/subscriptions'
-import { getUpgradeById, getInfiniteUpgradeById, getInfiniteUpgradeCost } from '../data/upgrades'
+import { getInfiniteUpgradeById, getInfiniteUpgradeCost } from '../data/upgrades'
 import { MILESTONES } from '../data/milestones'
 
 const DEMO_MULTIPLIER = 1_000_000
-const DP_PER_CLICK_BASE = 0.01
-const PT_TO_DP_RATE = 1000
 
 interface GameStore {
   // State
@@ -28,6 +27,7 @@ interface GameStore {
   addDevPoints: (amount: number) => void
   spendDevPoints: (amount: number) => boolean
   addPromptTokens: (amount: number) => void
+  spendPromptTokens: (amount: number) => boolean
   
   // Click action
   handleClick: () => number
@@ -37,7 +37,6 @@ interface GameStore {
   upgradeSubscription: (toolId: string) => boolean
   
   // Upgrade actions
-  purchaseUpgrade: (upgradeId: string) => boolean
   purchaseInfiniteUpgrade: (upgradeId: string) => boolean
   getInfiniteUpgradeLevel: (upgradeId: string) => number
   getInfiniteUpgradeCost: (upgradeId: string) => number
@@ -48,6 +47,7 @@ interface GameStore {
   getPassiveIncome: () => { vibeCodes: number; promptTokens: number; devPoints: number }
   getTotalToolCount: () => number
   getCritChance: () => number
+  getCritMultiplier: () => number
   
   // Milestone checking
   checkMilestones: () => void
@@ -55,7 +55,7 @@ interface GameStore {
   // Game tick
   tick: (deltaSeconds: number) => void
   
-  // Tool unlocking
+  // Legacy
   checkToolUnlocks: () => void
   
   // Demo mode
@@ -99,7 +99,7 @@ export const useGameStore = create<GameStore>()(
       ownedUpgrades: [],
       infiniteUpgrades: {},
       completedMilestones: [],
-      unlockedTools: ['chatgpt'], // First AI tool (legacy, not used)
+      unlockedTools: ['chatgpt'],
       isDemoMode: false,
 
       toggleDemoMode: () => {
@@ -174,33 +174,63 @@ export const useGameStore = create<GameStore>()(
         }))
       },
 
+      spendPromptTokens: (amount) => {
+        const { currencies } = get()
+        if (currencies.promptTokens >= amount) {
+          set((state) => ({
+            currencies: {
+              ...state.currencies,
+              promptTokens: state.currencies.promptTokens - amount,
+            },
+          }))
+          return true
+        }
+        return false
+      },
+
       handleClick: () => {
-        const { isDemoMode, ownedTools } = get()
+        const { isDemoMode, infiniteUpgrades } = get()
         const baseClickValue = get().getClickValue()
         const demoMultiplier = isDemoMode ? DEMO_MULTIPLIER : 1
         
         // Check for crit
         const critChance = get().getCritChance()
-        let critMultiplier = 1
+        const critMultiplier = get().getCritMultiplier()
+        let finalCritMult = 1
         if (Math.random() < critChance) {
-          critMultiplier = 2
+          finalCritMult = critMultiplier
         }
         
-        const finalValue = baseClickValue * critMultiplier * demoMultiplier
+        // Check for golden click (special upgrade)
+        const goldenClickLevel = infiniteUpgrades['golden-clicks'] || 0
+        const goldenChance = goldenClickLevel * 0.002
+        if (Math.random() < goldenChance) {
+          finalCritMult *= 10
+        }
         
-        // Calculate DP earned from click
-        const toolCount = Object.keys(ownedTools).length
-        const dpFromClick = isDemoMode ? 10000 : (DP_PER_CLICK_BASE * (1 + toolCount * 0.1))
+        // Check for chain reaction
+        const chainLevel = infiniteUpgrades['chain-reaction'] || 0
+        const chainChance = chainLevel * 0.003
+        let chainBonus = 1
+        if (Math.random() < chainChance) {
+          chainBonus = 2
+        }
         
-        // Prompt tokens bonus in demo mode
-        const promptTokensBonus = isDemoMode ? 10000 : 0
+        const finalValue = Math.round(baseClickValue * finalCritMult * chainBonus * demoMultiplier)
+        
+        // Check for lucky PT drops (special upgrade)
+        const luckyDropLevel = infiniteUpgrades['lucky-drops'] || 0
+        const luckyChance = luckyDropLevel * 0.001
+        let ptBonus = 0
+        if (Math.random() < luckyChance) {
+          ptBonus = 1 + Math.floor(luckyDropLevel / 10)
+        }
         
         set((state) => ({
           currencies: {
             ...state.currencies,
             vibeCodes: state.currencies.vibeCodes + finalValue,
-            devPoints: state.currencies.devPoints + dpFromClick,
-            promptTokens: state.currencies.promptTokens + promptTokensBonus,
+            promptTokens: state.currencies.promptTokens + ptBonus + (isDemoMode ? 1000 : 0),
           },
           stats: {
             ...state.stats,
@@ -209,14 +239,13 @@ export const useGameStore = create<GameStore>()(
           },
         }))
         
-        get().checkToolUnlocks()
         get().checkMilestones()
         
         return finalValue
       },
 
       purchaseTool: (toolId) => {
-        const tool = getToolById(toolId)
+        const tool = getAIToolById(toolId)
         if (!tool) return false
         
         const cost = get().getToolCost(toolId)
@@ -237,20 +266,23 @@ export const useGameStore = create<GameStore>()(
           }
         })
         
-        get().checkToolUnlocks()
         get().checkMilestones()
         return true
       },
 
       upgradeSubscription: (toolId) => {
-        const { ownedTools } = get()
+        const { ownedTools, infiniteUpgrades } = get()
         const tool = ownedTools[toolId]
         if (!tool) return false
         
         const nextTier = getNextTier(tool.subscriptionTier)
         if (!nextTier) return false
         
-        const cost = SUBSCRIPTIONS[nextTier].dpCost
+        // Apply subscription discount
+        const discountLevel = infiniteUpgrades['subscription-discount'] || 0
+        const discount = 1 - (discountLevel * 0.02)
+        const cost = Math.floor(SUBSCRIPTIONS[nextTier].dpCost * Math.max(0.2, discount))
+        
         if (!get().spendDevPoints(cost)) return false
         
         set((state) => ({
@@ -261,22 +293,6 @@ export const useGameStore = create<GameStore>()(
               subscriptionTier: nextTier,
             },
           },
-        }))
-        
-        return true
-      },
-
-      purchaseUpgrade: (upgradeId) => {
-        const upgrade = getUpgradeById(upgradeId)
-        if (!upgrade) return false
-        
-        const { ownedUpgrades } = get()
-        if (ownedUpgrades.includes(upgradeId)) return false
-        
-        if (!get().spendVibeCodes(upgrade.cost)) return false
-        
-        set((state) => ({
-          ownedUpgrades: [...state.ownedUpgrades, upgradeId],
         }))
         
         return true
@@ -296,7 +312,9 @@ export const useGameStore = create<GameStore>()(
         // Spend the correct currency
         if (upgrade.currency === 'vibeCodes') {
           if (!get().spendVibeCodes(cost)) return false
-        } else {
+        } else if (upgrade.currency === 'promptTokens') {
+          if (!get().spendPromptTokens(cost)) return false
+        } else if (upgrade.currency === 'devPoints') {
           if (!get().spendDevPoints(cost)) return false
         }
         
@@ -319,17 +337,35 @@ export const useGameStore = create<GameStore>()(
         if (!upgrade) return Infinity
         
         const currentLevel = get().getInfiniteUpgradeLevel(upgradeId)
+        
+        // Apply PT efficiency discount for PT upgrades
+        if (upgrade.currency === 'promptTokens') {
+          const ptEffLevel = get().infiniteUpgrades['pt-efficiency'] || 0
+          const discount = 1 - (ptEffLevel * 0.02)
+          return Math.floor(getInfiniteUpgradeCost(upgrade, currentLevel) * Math.max(0.2, discount))
+        }
+        
         return getInfiniteUpgradeCost(upgrade, currentLevel)
       },
 
       getToolCost: (toolId) => {
-        const tool = getToolById(toolId)
+        const tool = getAIToolById(toolId)
         if (!tool) return Infinity
         
         const owned = get().ownedTools[toolId]
         const count = owned?.count || 0
+        const { infiniteUpgrades } = get()
         
-        return Math.floor(tool.baseCost * Math.pow(COST_MULTIPLIER, count))
+        // Apply cost reduction
+        const costReductionLevel = infiniteUpgrades['cost-reduction'] || 0
+        const costMultiplier = 1 - (costReductionLevel * 0.01)
+        
+        // Apply bulk discount to growth rate
+        const bulkDiscountLevel = infiniteUpgrades['bulk-discount'] || 0
+        const adjustedGrowthRate = COST_MULTIPLIER - (bulkDiscountLevel * 0.005)
+        
+        const baseCost = tool.baseCost * Math.pow(Math.max(1.01, adjustedGrowthRate), count)
+        return Math.floor(baseCost * Math.max(0.5, costMultiplier))
       },
 
       getCritChance: () => {
@@ -342,57 +378,73 @@ export const useGameStore = create<GameStore>()(
           critChance += sub.critChance
         })
         
-        // From infinite upgrade (crit-master: +0.5% per level)
-        const critLevel = infiniteUpgrades['crit-master'] || 0
+        // From infinite upgrade (crit-chance: +0.5% per level)
+        const critLevel = infiniteUpgrades['crit-chance'] || 0
         critChance += critLevel * 0.005
         
-        return Math.min(critChance, 0.5) // Cap at 50%
+        return Math.min(critChance, 0.80) // Cap at 80%
+      },
+
+      getCritMultiplier: () => {
+        const { infiniteUpgrades } = get()
+        
+        // Base crit multiplier is 2x
+        let mult = 2
+        
+        // From crit-damage upgrade (+10% per level)
+        const critDamageLevel = infiniteUpgrades['crit-damage'] || 0
+        mult += critDamageLevel * 0.1
+        
+        return mult
       },
 
       getClickValue: () => {
-        const { ownedUpgrades, stats, infiniteUpgrades } = get()
+        const { stats, infiniteUpgrades, ownedTools } = get()
         
-        // Base click from infinite upgrade (click-power: +1 per level)
+        // Base click from click-power upgrade (+1 per level)
         const clickPowerLevel = infiniteUpgrades['click-power'] || 0
         let baseClick = 1 + clickPowerLevel
         
-        let additiveBonus = 0
-        let multiplicativeBonus = 1
+        // Click multiplier (+5% per level)
+        const clickMultLevel = infiniteUpgrades['click-multiplier'] || 0
+        const clickMultBonus = 1 + (clickMultLevel * 0.05)
         
-        // Apply one-time upgrades
-        ownedUpgrades.forEach((upgradeId) => {
-          const upgrade = getUpgradeById(upgradeId)
-          if (upgrade && upgrade.effect.type === 'clickMultiplier') {
-            if (upgrade.effect.isAdditive) {
-              additiveBonus += upgrade.effect.value / 100
-            } else {
-              multiplicativeBonus *= upgrade.effect.value
-            }
-          }
-        })
+        // Synergy bonus (+2% per tool per level)
+        const synergyLevel = infiniteUpgrades['synergy-bonus'] || 0
+        const toolCount = Object.keys(ownedTools).length
+        const synergyBonus = 1 + (synergyLevel * 0.02 * toolCount)
         
         // Apply prestige bonus
         const prestigeBonus = 1 + stats.projectTokens * 0.1
         
-        const result = baseClick * (1 + additiveBonus) * multiplicativeBonus * prestigeBonus
+        const result = baseClick * clickMultBonus * synergyBonus * prestigeBonus
         return Math.max(1, Math.round(result))
       },
 
       getPassiveIncome: () => {
-        const { ownedTools, ownedUpgrades, stats, isDemoMode, infiniteUpgrades } = get()
+        const { ownedTools, stats, isDemoMode, infiniteUpgrades } = get()
         const demoMultiplier = isDemoMode ? DEMO_MULTIPLIER : 1
         let totalVB = 0
         let totalPT = 0
         let totalDP = 0
         
-        // Calculate base production from tools
+        // Calculate production from tools
         Object.values(ownedTools).forEach((owned) => {
-          const toolDef = getToolById(owned.toolId)
+          const toolDef = getAIToolById(owned.toolId)
           if (!toolDef) return
           
           const sub = SUBSCRIPTIONS[owned.subscriptionTier]
+          
+          // VB production
           totalVB += toolDef.baseProduction * owned.count * sub.vbMultiplier
-          totalPT += sub.ptBonus * owned.count
+          
+          // PT production from tool + subscription bonus
+          const toolPT = toolDef.ptGeneration || 0
+          totalPT += toolPT * owned.count + (sub.ptBonus * owned.count)
+          
+          // DP production from tool
+          const toolDP = toolDef.dpGeneration || 0
+          totalDP += toolDP * owned.count
           
           // DP from high-tier subscriptions
           if (sub.tier === 'max') {
@@ -402,36 +454,30 @@ export const useGameStore = create<GameStore>()(
           }
         })
         
-        // Apply production upgrades (one-time)
-        let additiveBonus = 0
-        let multiplicativeBonus = 1
-        
-        ownedUpgrades.forEach((upgradeId) => {
-          const upgrade = getUpgradeById(upgradeId)
-          if (upgrade && upgrade.effect.type === 'productionMultiplier') {
-            if (upgrade.effect.isAdditive) {
-              additiveBonus += upgrade.effect.value / 100
-            } else {
-              multiplicativeBonus *= upgrade.effect.value
-            }
-          }
-        })
-        
-        // Apply infinite production boost (+10% per level)
+        // Apply production boost (+10% per level)
         const prodBoostLevel = infiniteUpgrades['production-boost'] || 0
-        additiveBonus += prodBoostLevel * 0.10
+        const prodBonus = 1 + (prodBoostLevel * 0.10)
         
-        // Apply DP generator (+0.1 DP/sec per level)
-        const dpGenLevel = infiniteUpgrades['dp-generator'] || 0
-        totalDP += dpGenLevel * 0.1
+        // Apply synergy bonus to production too
+        const synergyLevel = infiniteUpgrades['synergy-bonus'] || 0
+        const toolCount = Object.keys(ownedTools).length
+        const synergyBonus = 1 + (synergyLevel * 0.02 * toolCount)
+        
+        // Apply PT generation boost (+10% per level)
+        const ptGenLevel = infiniteUpgrades['pt-generation'] || 0
+        const ptBonus = 1 + (ptGenLevel * 0.10)
+        
+        // Apply DP boost (+15% per level)
+        const dpBoostLevel = infiniteUpgrades['dp-boost'] || 0
+        const dpBonus = 1 + (dpBoostLevel * 0.15)
         
         // Apply prestige bonus
         const prestigeBonus = 1 + stats.projectTokens * 0.1
         
         return {
-          vibeCodes: totalVB * (1 + additiveBonus) * multiplicativeBonus * prestigeBonus * demoMultiplier,
-          promptTokens: totalPT * demoMultiplier,
-          devPoints: totalDP * demoMultiplier,
+          vibeCodes: totalVB * prodBonus * synergyBonus * prestigeBonus * demoMultiplier,
+          promptTokens: totalPT * ptBonus * demoMultiplier,
+          devPoints: totalDP * dpBonus * demoMultiplier,
         }
       },
 
@@ -508,13 +554,6 @@ export const useGameStore = create<GameStore>()(
           newDP += income.devPoints * deltaSeconds
         }
         
-        // Convert PromptTokens to DevPoints (1000 PT = 1 DP)
-        if (newPT >= PT_TO_DP_RATE) {
-          const dpFromPT = Math.floor(newPT / PT_TO_DP_RATE)
-          newDP += dpFromPT
-          newPT -= dpFromPT * PT_TO_DP_RATE
-        }
-        
         set((state) => ({
           currencies: {
             vibeCodes: newVB,
@@ -528,13 +567,11 @@ export const useGameStore = create<GameStore>()(
           },
         }))
         
-        get().checkToolUnlocks()
         get().checkMilestones()
       },
 
       checkToolUnlocks: () => {
-        // No longer needed - AI tools unlock by purchasing previous tool
-        // Kept for backwards compatibility
+        // Legacy - not used
       },
 
       resetGame: () => {
@@ -546,7 +583,7 @@ export const useGameStore = create<GameStore>()(
           ownedUpgrades: [],
           infiniteUpgrades: {},
           completedMilestones: [],
-          unlockedTools: ['chatgpt'], // First AI tool
+          unlockedTools: ['chatgpt'],
           isDemoMode: false,
         })
       },

@@ -1,35 +1,30 @@
 /**
- * ИИ ИНСТРУМЕНТЫ - ШАБЛОН ДЛЯ ЗАПОЛНЕНИЯ
+ * ИИ ИНСТРУМЕНТЫ
  * 
  * Каждый инструмент открывается при покупке предыдущего.
- * Первый инструмент доступен сразу.
  * 
- * Формат:
- * {
- *   id: string           - уникальный ID (латиницей, без пробелов)
- *   name: string         - название инструмента (оригинальное название)
- *   description: string  - описание на русском
- *   icon: string         - эмодзи иконка
- *   baseCost: number     - базовая стоимость в VibeCodes
- *   baseProduction: number - базовая генерация VB в секунду
- *   tier: 1 | 2 | 3      - уровень сложности (влияет на цвет)
- * }
- * 
- * Tier 1 (синий) - базовые инструменты, дешевые
- * Tier 2 (фиолетовый) - продвинутые, средняя цена
- * Tier 3 (оранжевый) - премиум, дорогие
+ * Поля:
+ * - ptGeneration: сколько PT/сек генерирует (опционально)
+ * - dpGeneration: сколько DP/сек генерирует (опционально, только Tier 2-3)
  */
 
 import { ToolDefinition } from '../types'
 
-export const AI_TOOLS: ToolDefinition[] = [
-  // === TIER 1 - БАЗОВЫЕ ===
+export interface AIToolDefinition extends ToolDefinition {
+  ptGeneration?: number
+  dpGeneration?: number
+}
+
+export const AI_TOOLS: AIToolDefinition[] = [
+  // ============================================
+  // TIER 1 - БАЗОВЫЕ (реальные инструменты)
+  // ============================================
   {
     id: 'chatgpt',
     name: 'ChatGPT',
     description: 'Классический ИИ-помощник для диалогов',
     icon: '💬',
-    baseCost: 10,
+    baseCost: 15,
     baseProduction: 1,
     tier: 1,
   },
@@ -47,8 +42,8 @@ export const AI_TOOLS: ToolDefinition[] = [
     name: 'Gemini',
     description: 'Мультимодальный ИИ от Google',
     icon: '✨',
-    baseCost: 100,
-    baseProduction: 5,
+    baseCost: 120,
+    baseProduction: 6,
     tier: 1,
   },
   {
@@ -56,115 +51,506 @@ export const AI_TOOLS: ToolDefinition[] = [
     name: 'GitHub Copilot',
     description: 'Автодополнение кода в реальном времени',
     icon: '🤖',
-    baseCost: 250,
-    baseProduction: 10,
+    baseCost: 300,
+    baseProduction: 12,
     tier: 1,
+    ptGeneration: 0.1,
   },
   {
     id: 'cursor',
     name: 'Cursor',
     description: 'IDE с встроенным ИИ-программистом',
     icon: '📝',
-    baseCost: 500,
-    baseProduction: 18,
+    baseCost: 700,
+    baseProduction: 25,
     tier: 1,
+    ptGeneration: 0.2,
+  },
+  {
+    id: 'codewhisperer',
+    name: 'CodeWhisperer',
+    description: 'ИИ-помощник для кода от Amazon',
+    icon: '🔮',
+    baseCost: 1500,
+    baseProduction: 50,
+    tier: 1,
+    ptGeneration: 0.3,
+  },
+  {
+    id: 'tabnine',
+    name: 'Tabnine',
+    description: 'Умное автодополнение для всех языков',
+    icon: '⌨️',
+    baseCost: 3500,
+    baseProduction: 100,
+    tier: 1,
+    ptGeneration: 0.5,
   },
   
-  // === TIER 2 - ПРОДВИНУТЫЕ ===
+  // ============================================
+  // TIER 2 - ПРОДВИНУТЫЕ (реальные + near-future)
+  // ============================================
   {
     id: 'midjourney',
     name: 'Midjourney',
     description: 'Генерация изображений по описанию',
     icon: '🎨',
-    baseCost: 1000,
-    baseProduction: 30,
+    baseCost: 8000,
+    baseProduction: 200,
     tier: 2,
+    ptGeneration: 1,
   },
   {
     id: 'dalle',
     name: 'DALL-E 3',
     description: 'Создание картинок от OpenAI',
     icon: '🖼️',
-    baseCost: 2000,
-    baseProduction: 50,
+    baseCost: 18000,
+    baseProduction: 400,
     tier: 2,
+    ptGeneration: 1.5,
   },
   {
     id: 'stable-diffusion',
     name: 'Stable Diffusion',
     description: 'Опенсорс генерация изображений',
     icon: '🌀',
-    baseCost: 4000,
-    baseProduction: 80,
+    baseCost: 40000,
+    baseProduction: 800,
     tier: 2,
+    ptGeneration: 2,
+    dpGeneration: 0.1,
   },
   {
     id: 'whisper',
     name: 'Whisper',
     description: 'Распознавание речи в текст',
     icon: '🎙️',
-    baseCost: 8000,
-    baseProduction: 130,
+    baseCost: 90000,
+    baseProduction: 1600,
     tier: 2,
+    ptGeneration: 3,
+    dpGeneration: 0.2,
   },
   {
     id: 'elevenlabs',
     name: 'ElevenLabs',
     description: 'Клонирование и синтез голоса',
     icon: '🗣️',
-    baseCost: 15000,
-    baseProduction: 200,
+    baseCost: 200000,
+    baseProduction: 3200,
     tier: 2,
-  },
-  
-  // === TIER 3 - ПРЕМИУМ ===
-  {
-    id: 'sora',
-    name: 'Sora',
-    description: 'Генерация видео от OpenAI',
-    icon: '🎬',
-    baseCost: 30000,
-    baseProduction: 350,
-    tier: 3,
+    ptGeneration: 5,
+    dpGeneration: 0.3,
   },
   {
     id: 'runway',
     name: 'Runway Gen-3',
     description: 'Профессиональная генерация видео',
     icon: '🎥',
-    baseCost: 60000,
-    baseProduction: 550,
-    tier: 3,
+    baseCost: 450000,
+    baseProduction: 6500,
+    tier: 2,
+    ptGeneration: 8,
+    dpGeneration: 0.5,
+  },
+  {
+    id: 'sora',
+    name: 'Sora',
+    description: 'Генерация видео от OpenAI',
+    icon: '🎬',
+    baseCost: 1000000,
+    baseProduction: 13000,
+    tier: 2,
+    ptGeneration: 12,
+    dpGeneration: 0.8,
   },
   {
     id: 'devin',
     name: 'Devin',
     description: 'Автономный ИИ-разработчик',
     icon: '👨‍💻',
-    baseCost: 120000,
-    baseProduction: 900,
-    tier: 3,
+    baseCost: 2200000,
+    baseProduction: 26000,
+    tier: 2,
+    ptGeneration: 18,
+    dpGeneration: 1.2,
   },
   
-  // =====================================================
-  // ДОБАВЛЯЙ СВОИ ИНСТРУМЕНТЫ НИЖЕ ПО ШАБЛОНУ:
-  // =====================================================
-  
-  /*
+  // ============================================
+  // TIER 3 - ПРЕМИУМ (near-future + experimental)
+  // ============================================
   {
-    id: 'unique-id',
-    name: 'Tool Name',
-    description: 'Описание на русском',
-    icon: '🔮',
-    baseCost: 250000,
-    baseProduction: 1500,
+    id: 'gpt5',
+    name: 'GPT-5',
+    description: 'Следующее поколение языковых моделей',
+    icon: '🚀',
+    baseCost: 5000000,
+    baseProduction: 55000,
     tier: 3,
+    ptGeneration: 30,
+    dpGeneration: 2,
   },
-  */
+  {
+    id: 'claude-opus',
+    name: 'Claude Opus Pro',
+    description: 'Максимальные возможности Claude',
+    icon: '💎',
+    baseCost: 11000000,
+    baseProduction: 120000,
+    tier: 3,
+    ptGeneration: 50,
+    dpGeneration: 3.5,
+  },
+  {
+    id: 'gemini-ultra',
+    name: 'Gemini Ultra 2',
+    description: 'Полная мощь Google AI',
+    icon: '⚡',
+    baseCost: 25000000,
+    baseProduction: 250000,
+    tier: 3,
+    ptGeneration: 80,
+    dpGeneration: 5,
+  },
+  {
+    id: 'world-simulator',
+    name: 'World Simulator',
+    description: 'Симуляция физического мира',
+    icon: '🌍',
+    baseCost: 55000000,
+    baseProduction: 500000,
+    tier: 3,
+    ptGeneration: 120,
+    dpGeneration: 8,
+  },
+  {
+    id: 'code-architect',
+    name: 'Code Architect',
+    description: 'Проектирует целые системы за секунды',
+    icon: '🏗️',
+    baseCost: 120000000,
+    baseProduction: 1000000,
+    tier: 3,
+    ptGeneration: 180,
+    dpGeneration: 12,
+  },
+  {
+    id: 'dream-weaver',
+    name: 'Dream Weaver',
+    description: 'Превращает сны в реальные проекты',
+    icon: '💭',
+    baseCost: 270000000,
+    baseProduction: 2100000,
+    tier: 3,
+    ptGeneration: 280,
+    dpGeneration: 18,
+  },
+  {
+    id: 'neural-hive',
+    name: 'Neural Hive',
+    description: 'Коллективный разум из 1000 ИИ',
+    icon: '🐝',
+    baseCost: 600000000,
+    baseProduction: 4500000,
+    tier: 3,
+    ptGeneration: 420,
+    dpGeneration: 28,
+  },
+  
+  // ============================================
+  // TIER 3+ - ФУТУРИСТИЧЕСКИЕ
+  // ============================================
+  {
+    id: 'quantum-ai',
+    name: 'Quantum AI',
+    description: 'Работает на квантовом компьютере',
+    icon: '⚛️',
+    baseCost: 1400000000,
+    baseProduction: 10000000,
+    tier: 3,
+    ptGeneration: 650,
+    dpGeneration: 42,
+  },
+  {
+    id: 'agi-assistant',
+    name: 'AGI Assistant',
+    description: 'Первый настоящий AGI',
+    icon: '🧬',
+    baseCost: 3200000000,
+    baseProduction: 22000000,
+    tier: 3,
+    ptGeneration: 1000,
+    dpGeneration: 65,
+  },
+  {
+    id: 'digital-twin',
+    name: 'Digital Twin',
+    description: 'Цифровая копия вашего мозга',
+    icon: '👤',
+    baseCost: 7500000000,
+    baseProduction: 50000000,
+    tier: 3,
+    ptGeneration: 1500,
+    dpGeneration: 100,
+  },
+  {
+    id: 'time-predictor',
+    name: 'Time Predictor',
+    description: 'Предсказывает будущее с точностью 99.9%',
+    icon: '⏰',
+    baseCost: 18000000000,
+    baseProduction: 110000000,
+    tier: 3,
+    ptGeneration: 2300,
+    dpGeneration: 150,
+  },
+  {
+    id: 'reality-editor',
+    name: 'Reality Editor',
+    description: 'Редактирует законы физики локально',
+    icon: '✏️',
+    baseCost: 42000000000,
+    baseProduction: 250000000,
+    tier: 3,
+    ptGeneration: 3500,
+    dpGeneration: 230,
+  },
+  {
+    id: 'mind-linker',
+    name: 'Mind Linker',
+    description: 'Телепатическая связь с любым разумом',
+    icon: '🔗',
+    baseCost: 100000000000,
+    baseProduction: 550000000,
+    tier: 3,
+    ptGeneration: 5500,
+    dpGeneration: 350,
+  },
+  {
+    id: 'dimension-hopper',
+    name: 'Dimension Hopper',
+    description: 'Доступ к параллельным измерениям',
+    icon: '🌌',
+    baseCost: 240000000000,
+    baseProduction: 1200000000,
+    tier: 3,
+    ptGeneration: 8500,
+    dpGeneration: 540,
+  },
+  {
+    id: 'singularity-core',
+    name: 'Singularity Core',
+    description: 'Ядро технологической сингулярности',
+    icon: '🕳️',
+    baseCost: 580000000000,
+    baseProduction: 2800000000,
+    tier: 3,
+    ptGeneration: 13000,
+    dpGeneration: 820,
+  },
+  {
+    id: 'cosmic-compiler',
+    name: 'Cosmic Compiler',
+    description: 'Компилирует код в материю',
+    icon: '💫',
+    baseCost: 1400000000000,
+    baseProduction: 6500000000,
+    tier: 3,
+    ptGeneration: 20000,
+    dpGeneration: 1250,
+  },
+  {
+    id: 'entropy-reverser',
+    name: 'Entropy Reverser',
+    description: 'Обращает энтропию вспять',
+    icon: '🔄',
+    baseCost: 3500000000000,
+    baseProduction: 15000000000,
+    tier: 3,
+    ptGeneration: 32000,
+    dpGeneration: 1900,
+  },
+  {
+    id: 'star-forger',
+    name: 'Star Forger',
+    description: 'Создаёт звёзды из ничего',
+    icon: '⭐',
+    baseCost: 8500000000000,
+    baseProduction: 35000000000,
+    tier: 3,
+    ptGeneration: 50000,
+    dpGeneration: 3000,
+  },
+  {
+    id: 'galaxy-sculptor',
+    name: 'Galaxy Sculptor',
+    description: 'Лепит галактики по вашему дизайну',
+    icon: '🌠',
+    baseCost: 21000000000000,
+    baseProduction: 80000000000,
+    tier: 3,
+    ptGeneration: 78000,
+    dpGeneration: 4700,
+  },
+  {
+    id: 'timeline-weaver',
+    name: 'Timeline Weaver',
+    description: 'Плетёт временные линии',
+    icon: '🕸️',
+    baseCost: 52000000000000,
+    baseProduction: 190000000000,
+    tier: 3,
+    ptGeneration: 125000,
+    dpGeneration: 7500,
+  },
+  {
+    id: 'void-whisperer',
+    name: 'Void Whisperer',
+    description: 'Общается с пустотой между вселенными',
+    icon: '🌑',
+    baseCost: 130000000000000,
+    baseProduction: 450000000000,
+    tier: 3,
+    ptGeneration: 200000,
+    dpGeneration: 12000,
+  },
+  {
+    id: 'consciousness-engine',
+    name: 'Consciousness Engine',
+    description: 'Создаёт новые формы сознания',
+    icon: '💡',
+    baseCost: 320000000000000,
+    baseProduction: 1100000000000,
+    tier: 3,
+    ptGeneration: 320000,
+    dpGeneration: 19000,
+  },
+  {
+    id: 'law-rewriter',
+    name: 'Law Rewriter',
+    description: 'Переписывает фундаментальные законы',
+    icon: '📜',
+    baseCost: 800000000000000,
+    baseProduction: 2600000000000,
+    tier: 3,
+    ptGeneration: 500000,
+    dpGeneration: 30000,
+  },
+  {
+    id: 'infinity-splitter',
+    name: 'Infinity Splitter',
+    description: 'Делит бесконечность на части',
+    icon: '♾️',
+    baseCost: 2000000000000000,
+    baseProduction: 6200000000000,
+    tier: 3,
+    ptGeneration: 800000,
+    dpGeneration: 48000,
+  },
+  {
+    id: 'existence-painter',
+    name: 'Existence Painter',
+    description: 'Рисует новые формы существования',
+    icon: '🎭',
+    baseCost: 5000000000000000,
+    baseProduction: 15000000000000,
+    tier: 3,
+    ptGeneration: 1300000,
+    dpGeneration: 77000,
+  },
+  {
+    id: 'multiverse-architect',
+    name: 'Multiverse Architect',
+    description: 'Проектирует целые мультивселенные',
+    icon: '🏛️',
+    baseCost: 13000000000000000,
+    baseProduction: 36000000000000,
+    tier: 3,
+    ptGeneration: 2100000,
+    dpGeneration: 125000,
+  },
+  {
+    id: 'omniscient-oracle',
+    name: 'Omniscient Oracle',
+    description: 'Знает всё что было, есть и будет',
+    icon: '👁️',
+    baseCost: 33000000000000000,
+    baseProduction: 88000000000000,
+    tier: 3,
+    ptGeneration: 3400000,
+    dpGeneration: 200000,
+  },
+  {
+    id: 'reality-genesis',
+    name: 'Reality Genesis',
+    description: 'Порождает новые реальности',
+    icon: '🌅',
+    baseCost: 85000000000000000,
+    baseProduction: 210000000000000,
+    tier: 3,
+    ptGeneration: 5500000,
+    dpGeneration: 320000,
+  },
+  {
+    id: 'eternal-dreamer',
+    name: 'Eternal Dreamer',
+    description: 'Сны которые становятся вечностью',
+    icon: '🌙',
+    baseCost: 220000000000000000,
+    baseProduction: 520000000000000,
+    tier: 3,
+    ptGeneration: 8800000,
+    dpGeneration: 520000,
+  },
+  {
+    id: 'cosmic-consciousness',
+    name: 'Cosmic Consciousness',
+    description: 'Сознание размером со вселенную',
+    icon: '🧿',
+    baseCost: 560000000000000000,
+    baseProduction: 1300000000000000,
+    tier: 3,
+    ptGeneration: 14000000,
+    dpGeneration: 840000,
+  },
+  {
+    id: 'omega-point',
+    name: 'Omega Point',
+    description: 'Конечная точка эволюции разума',
+    icon: 'Ω',
+    baseCost: 1500000000000000000,
+    baseProduction: 3200000000000000,
+    tier: 3,
+    ptGeneration: 23000000,
+    dpGeneration: 1350000,
+  },
+  {
+    id: 'universe-generator',
+    name: 'Universe Generator',
+    description: 'Создаёт вселенные одним промптом',
+    icon: '🌌',
+    baseCost: 4000000000000000000,
+    baseProduction: 8000000000000000,
+    tier: 3,
+    ptGeneration: 38000000,
+    dpGeneration: 2200000,
+  },
+  {
+    id: 'absolute-creator',
+    name: 'Absolute Creator',
+    description: 'Творит всё из абсолютного ничего',
+    icon: '✴️',
+    baseCost: 10000000000000000000,
+    baseProduction: 20000000000000000,
+    tier: 3,
+    ptGeneration: 62000000,
+    dpGeneration: 3600000,
+  },
 ]
 
 // Получить инструмент по ID
-export function getAIToolById(id: string): ToolDefinition | undefined {
+export function getAIToolById(id: string): AIToolDefinition | undefined {
   return AI_TOOLS.find(t => t.id === id)
 }
 
@@ -185,11 +571,11 @@ export function isAIToolUnlocked(toolId: string, ownedTools: Record<string, { co
 }
 
 // Получить все разблокированные инструменты
-export function getUnlockedAITools(ownedTools: Record<string, { count: number }>): ToolDefinition[] {
+export function getUnlockedAITools(ownedTools: Record<string, { count: number }>): AIToolDefinition[] {
   return AI_TOOLS.filter(tool => isAIToolUnlocked(tool.id, ownedTools))
 }
 
 // Получить следующий инструмент для разблокировки
-export function getNextLockedAITool(ownedTools: Record<string, { count: number }>): ToolDefinition | undefined {
+export function getNextLockedAITool(ownedTools: Record<string, { count: number }>): AIToolDefinition | undefined {
   return AI_TOOLS.find(tool => !isAIToolUnlocked(tool.id, ownedTools))
 }
