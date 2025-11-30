@@ -13,7 +13,7 @@ export interface AIToolDefinition extends ToolDefinition {
 }
 
 // Версия данных - увеличивать при изменении структуры
-const DATA_VERSION = 2
+const DATA_VERSION = 3
 
 // Количество статичных инструментов
 export const STATIC_TOOLS_COUNT = 18
@@ -216,9 +216,24 @@ export const STATIC_AI_TOOLS: AIToolDefinition[] = [
 // Динамический список всех инструментов (статичные + сгенерированные)
 export let AI_TOOLS: AIToolDefinition[] = [...STATIC_AI_TOOLS]
 
-// Добавить сгенерированный инструмент
-export function addGeneratedTool(tool: AIToolDefinition): void {
+// Добавить сгенерированный инструмент (с проверкой на дубликаты)
+export function addGeneratedTool(tool: AIToolDefinition): boolean {
+  // Проверяем дубликат по ID
+  if (AI_TOOLS.some(t => t.id === tool.id)) {
+    console.warn('Tool with this ID already exists:', tool.id)
+    return false
+  }
+  
+  // Проверяем дубликат по имени среди сгенерированных
+  const generatedTools = AI_TOOLS.filter(t => t.id.startsWith('generated-'))
+  if (generatedTools.some(t => t.name === tool.name)) {
+    console.warn('Tool with this name already exists:', tool.name)
+    return false
+  }
+  
   AI_TOOLS = [...AI_TOOLS, tool]
+  console.log('Added new tool:', tool.name, 'Total:', AI_TOOLS.length)
+  return true
 }
 
 // Очистить сгенерированные инструменты

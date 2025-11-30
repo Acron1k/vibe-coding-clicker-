@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect, useCallback } from 'react'
+import { useMemo, useState, useEffect, useRef } from 'react'
 import { useGameStore } from '../store/gameStore'
 import { 
   AI_TOOLS, 
@@ -8,7 +8,8 @@ import {
   getLastNTools,
   addGeneratedTool,
   saveGeneratedTools,
-  STATIC_TOOLS_COUNT
+  STATIC_TOOLS_COUNT,
+  getAIToolById
 } from '../data/aiTools'
 import { ToolCard } from './ToolCard'
 import { formatNumber } from '../utils/formatters'
@@ -18,11 +19,82 @@ export function ToolList() {
   const ownedTools = useGameStore((s) => s.ownedTools)
   const [isGenerating, setIsGenerating] = useState(false)
   const [generationError, setGenerationError] = useState<string | null>(null)
-  const [toolsVersion, setToolsVersion] = useState(0) // Force re-render when tools change
+  const [toolsVersion, setToolsVersion] = useState(0)
+  
+  // Ref to prevent double generation
+  const generationLockRef = useRef(false)
+  const lastGeneratedIndexRef = useRef(STATIC_TOOLS_COUNT)
 
-  const handleGenerateNewTool = useCallback(async () => {
-    if (isGenerating) return
+  // Check if we need to generate a new tool
+  useEffect(() => {
+    const checkAndGenerate = async () => {
+      // Already generating or locked
+      if (generationLockRef.current || isGenerating) return
+      
+      // Check if we need new tool
+      if (!needsNewGeneratedTool(ownedTools)) return
+      
+      // Calculate expected index
+      const expectedIndex = AI_TOOLS.length + 1
+      
+      // Don't regenerate same index
+      if (expectedIndex <= lastGeneratedIndexRef.current && AI_TOOLS.length > STATIC_TOOLS_COUNT) return
+      
+      // Lock generation
+      generationLockRef.current = true
+      setIsGenerating(true)
+      setGenerationError(null)
+      
+      try {
+        const lastThree = getLastNTools(3)
+        const previousTool = lastThree[lastThree.length - 1]
+        
+        // Create unique ID with timestamp
+        const uniqueId = `generated-${expectedIndex}-${Date.now()}`
+        
+        // Check if similar tool already exists
+        const existingTool = getAIToolById(`generated-${expectedIndex}`)
+        if (existingTool) {
+          console.log('Tool already exists, skipping generation')
+          return
+        }
+        
+        const newTool = await generateNextTool({
+          lastThreeTools: lastThree,
+          toolIndex: expectedIndex,
+          previousTool
+        })
+        
+        // Override ID to be unique
+        newTool.id = uniqueId
+        
+        // Double check no duplicate
+        if (!getAIToolById(uniqueId)) {
+          addGeneratedTool(newTool)
+          saveGeneratedTools()
+          lastGeneratedIndexRef.current = expectedIndex
+          setToolsVersion(v => v + 1)
+        }
+        
+      } catch (error) {
+        console.error('Generation failed:', error)
+        setGenerationError('Не удалось сгенерировать инструмент')
+      } finally {
+        setIsGenerating(false)
+        // Delay unlock to prevent rapid re-trigger
+        setTimeout(() => {
+          generationLockRef.current = false
+        }, 1000)
+      }
+    }
     
+    checkAndGenerate()
+  }, [ownedTools, isGenerating])
+
+  const handleRetryGeneration = async () => {
+    if (generationLockRef.current) return
+    
+    generationLockRef.current = true
     setIsGenerating(true)
     setGenerationError(null)
     
@@ -30,6 +102,7 @@ export function ToolList() {
       const lastThree = getLastNTools(3)
       const previousTool = lastThree[lastThree.length - 1]
       const newToolIndex = AI_TOOLS.length + 1
+      const uniqueId = `generated-${newToolIndex}-${Date.now()}`
       
       const newTool = await generateNextTool({
         lastThreeTools: lastThree,
@@ -37,8 +110,10 @@ export function ToolList() {
         previousTool
       })
       
+      newTool.id = uniqueId
       addGeneratedTool(newTool)
       saveGeneratedTools()
+      lastGeneratedIndexRef.current = newToolIndex
       setToolsVersion(v => v + 1)
       
     } catch (error) {
@@ -46,18 +121,13 @@ export function ToolList() {
       setGenerationError('Не удалось сгенерировать инструмент')
     } finally {
       setIsGenerating(false)
+      setTimeout(() => {
+        generationLockRef.current = false
+      }, 1000)
     }
-  }, [isGenerating])
-
-  // Check if we need to generate a new tool
-  useEffect(() => {
-    if (needsNewGeneratedTool(ownedTools) && !isGenerating) {
-      handleGenerateNewTool()
-    }
-  }, [ownedTools, isGenerating, handleGenerateNewTool])
+  }
 
   const { unlockedTools, nextTool } = useMemo(() => {
-    // Use toolsVersion to force recalculation
     void toolsVersion
     const unlocked = AI_TOOLS.filter((tool) => isAIToolUnlocked(tool.id, ownedTools))
     const next = getNextLockedAITool(ownedTools)
@@ -65,10 +135,18 @@ export function ToolList() {
   }, [ownedTools, toolsVersion])
 
   const groupedTools = useMemo(() => {
+    // Remove duplicates by name (keep first occurrence)
+    const seen = new Set<string>()
+    const uniqueTools = unlockedTools.filter(tool => {
+      if (seen.has(tool.name)) return false
+      seen.add(tool.name)
+      return true
+    })
+    
     return {
-      tier1: unlockedTools.filter((t) => t.tier === 1),
-      tier2: unlockedTools.filter((t) => t.tier === 2),
-      tier3: unlockedTools.filter((t) => t.tier === 3),
+      tier1: uniqueTools.filter((t) => t.tier === 1),
+      tier2: uniqueTools.filter((t) => t.tier === 2),
+      tier3: uniqueTools.filter((t) => t.tier === 3),
     }
   }, [unlockedTools])
 
@@ -78,7 +156,7 @@ export function ToolList() {
   const tierInfo = [
     { key: 'tier1', name: 'Базовые', tools: groupedTools.tier1, dot: 'bg-blue-500' },
     { key: 'tier2', name: 'Продвинутые', tools: groupedTools.tier2, dot: 'bg-purple-500' },
-    { key: 'tier3', name: isGeneratedSection ? 'Сгенерированные ИИ' : 'Премиум', tools: groupedTools.tier3, dot: 'bg-orange-500' },
+    { key: 'tier3', name: isGeneratedSection ? 'ИИ-генерация' : 'Премиум', tools: groupedTools.tier3, dot: 'bg-orange-500' },
   ]
 
   return (
@@ -118,7 +196,7 @@ export function ToolList() {
         )
       })}
 
-      {/* Next tool to unlock or generate */}
+      {/* Next tool to unlock */}
       {nextTool && !isGenerating && (
         <div className="card bg-ink-100/50 border-dashed">
           <div className="flex items-center gap-3 opacity-60">
@@ -140,7 +218,7 @@ export function ToolList() {
         </div>
       )}
 
-      {/* Generating new tool indicator */}
+      {/* Generating indicator */}
       {isGenerating && (
         <div className="card bg-gradient-to-r from-purple-50 to-pink-50 border-purple-300">
           <div className="flex items-center gap-3">
@@ -149,7 +227,7 @@ export function ToolList() {
             </div>
             <div className="flex-1">
               <h3 className="font-display font-bold text-purple-700 text-sm">
-                Генерирую новый инструмент...
+                Генерирую инструмент #{AI_TOOLS.length + 1}...
               </h3>
               <p className="text-xs text-purple-500">
                 ИИ придумывает что-то невероятное
@@ -160,13 +238,13 @@ export function ToolList() {
         </div>
       )}
 
-      {/* Error state */}
-      {generationError && (
+      {/* Error */}
+      {generationError && !isGenerating && (
         <div className="card bg-red-50 border-red-300">
           <div className="flex items-center justify-between">
             <p className="text-sm text-red-600">{generationError}</p>
             <button 
-              onClick={handleGenerateNewTool}
+              onClick={handleRetryGeneration}
               className="btn btn-primary text-xs py-1 px-3"
             >
               Повторить
