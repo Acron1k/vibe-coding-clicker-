@@ -107,7 +107,7 @@ export function ClickButton() {
           ⚡
         </motion.span>
         <span className="relative text-xl md:text-2xl font-bold text-white z-10 tracking-wider">
-          VIBE
+          Prompt
         </span>
         <span className="relative text-sm text-neon-cyan z-10 font-mono">
           +{formatNumber(getClickValue())} VB
