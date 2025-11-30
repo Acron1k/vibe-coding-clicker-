@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { Currencies, PlayerStats, GameSettings, OwnedTool } from '../types'
-import { TOOLS, COST_MULTIPLIER, getToolById } from '../data/tools'
+import { COST_MULTIPLIER, getToolById } from '../data/tools'
 import { SUBSCRIPTIONS, getNextTier } from '../data/subscriptions'
 import { getUpgradeById, getInfiniteUpgradeById, getInfiniteUpgradeCost } from '../data/upgrades'
 import { MILESTONES } from '../data/milestones'
@@ -99,7 +99,7 @@ export const useGameStore = create<GameStore>()(
       ownedUpgrades: [],
       infiniteUpgrades: {},
       completedMilestones: [],
-      unlockedTools: ['claude-baseline'],
+      unlockedTools: ['chatgpt'], // First AI tool (legacy, not used)
       isDemoMode: false,
 
       toggleDemoMode: () => {
@@ -533,38 +533,8 @@ export const useGameStore = create<GameStore>()(
       },
 
       checkToolUnlocks: () => {
-        const { stats, ownedTools, unlockedTools } = get()
-        const toolCount = Object.keys(ownedTools).length
-        
-        TOOLS.forEach((tool) => {
-          if (unlockedTools.includes(tool.id)) return
-          
-          let shouldUnlock = false
-          
-          switch (tool.unlockCondition.type) {
-            case 'always':
-              shouldUnlock = true
-              break
-            case 'clicks':
-              shouldUnlock = stats.totalClicks >= (tool.unlockCondition.value || 0)
-              break
-            case 'vibeCodes':
-              shouldUnlock = stats.totalVibeCodesEarned >= (tool.unlockCondition.value || 0)
-              break
-            case 'toolPurchased':
-              shouldUnlock = !!ownedTools[tool.unlockCondition.toolId || '']
-              break
-            case 'toolCount':
-              shouldUnlock = toolCount >= (tool.unlockCondition.value || 0)
-              break
-          }
-          
-          if (shouldUnlock) {
-            set((state) => ({
-              unlockedTools: [...state.unlockedTools, tool.id],
-            }))
-          }
-        })
+        // No longer needed - AI tools unlock by purchasing previous tool
+        // Kept for backwards compatibility
       },
 
       resetGame: () => {
@@ -576,7 +546,7 @@ export const useGameStore = create<GameStore>()(
           ownedUpgrades: [],
           infiniteUpgrades: {},
           completedMilestones: [],
-          unlockedTools: ['claude-baseline'],
+          unlockedTools: ['chatgpt'], // First AI tool
           isDemoMode: false,
         })
       },

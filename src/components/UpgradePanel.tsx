@@ -12,9 +12,9 @@ export function UpgradePanel() {
   const getInfiniteUpgradeCostFn = useGameStore((s) => s.getInfiniteUpgradeCost)
 
   const categories = useMemo(() => [
-    { id: 'click', name: 'Click Power', icon: '👆', upgrades: getUpgradesByCategory('click') },
-    { id: 'production', name: 'Production', icon: '🤖', upgrades: getUpgradesByCategory('production') },
-    { id: 'idle', name: 'Idle', icon: '🌙', upgrades: getUpgradesByCategory('idle') },
+    { id: 'click', name: 'Сила клика', icon: '👆', upgrades: getUpgradesByCategory('click') },
+    { id: 'production', name: 'Производство', icon: '🤖', upgrades: getUpgradesByCategory('production') },
+    { id: 'idle', name: 'Оффлайн', icon: '🌙', upgrades: getUpgradesByCategory('idle') },
   ], [])
 
   const vbInfiniteUpgrades = INFINITE_UPGRADES.filter(u => u.currency === 'vibeCodes')
@@ -22,14 +22,14 @@ export function UpgradePanel() {
 
   return (
     <div className="card space-y-4">
-      <h2 className="text-lg font-display font-bold text-ink-800">Upgrades</h2>
+      <h2 className="text-lg font-display font-bold text-ink-800">Улучшения</h2>
       
       {/* Infinite Upgrades - VibeCodes */}
       <div className="space-y-2">
         <div className="flex items-center gap-2">
           <span className="text-sm">♾️</span>
           <h3 className="text-xs font-display font-bold text-coral-600 uppercase tracking-wider">
-            Infinite (VB)
+            Бесконечные (VB)
           </h3>
         </div>
         
@@ -58,7 +58,7 @@ export function UpgradePanel() {
                           {upgrade.name}
                         </h4>
                         <span className="text-[10px] px-2 py-0.5 rounded-lg bg-coral-100 text-coral-600 font-mono font-bold">
-                          Lv.{level}
+                          Ур.{level}
                         </span>
                       </div>
                       <p className="text-[11px] text-ink-500">{upgrade.effectPerLevel}</p>
@@ -66,7 +66,7 @@ export function UpgradePanel() {
                   </div>
                   
                   {isMaxed ? (
-                    <span className="text-lime-600 text-xs font-display font-bold px-3 py-1.5 bg-lime-100 rounded-lg">MAX</span>
+                    <span className="text-lime-600 text-xs font-display font-bold px-3 py-1.5 bg-lime-100 rounded-lg">МАКС</span>
                   ) : (
                     <button
                       onClick={() => purchaseInfiniteUpgrade(upgrade.id)}
@@ -95,7 +95,7 @@ export function UpgradePanel() {
         <div className="flex items-center gap-2">
           <span className="text-sm">💎</span>
           <h3 className="text-xs font-display font-bold text-purple-600 uppercase tracking-wider">
-            Infinite (DP)
+            Бесконечные (DP)
           </h3>
         </div>
         
@@ -124,7 +124,7 @@ export function UpgradePanel() {
                           {upgrade.name}
                         </h4>
                         <span className="text-[10px] px-2 py-0.5 rounded-lg bg-purple-100 text-purple-600 font-mono font-bold">
-                          Lv.{level}{upgrade.maxLevel ? `/${upgrade.maxLevel}` : ''}
+                          Ур.{level}{upgrade.maxLevel ? `/${upgrade.maxLevel}` : ''}
                         </span>
                       </div>
                       <p className="text-[11px] text-ink-500">{upgrade.effectPerLevel}</p>
@@ -132,7 +132,7 @@ export function UpgradePanel() {
                   </div>
                   
                   {isMaxed ? (
-                    <span className="text-lime-600 text-xs font-display font-bold px-3 py-1.5 bg-lime-100 rounded-lg">MAX</span>
+                    <span className="text-lime-600 text-xs font-display font-bold px-3 py-1.5 bg-lime-100 rounded-lg">МАКС</span>
                   ) : (
                     <button
                       onClick={() => purchaseInfiniteUpgrade(upgrade.id)}

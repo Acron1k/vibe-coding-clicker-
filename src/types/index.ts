@@ -37,13 +37,13 @@ export interface ToolDefinition {
   id: string
   name: string
   description: string
-  detailedDescription: string
+  detailedDescription?: string
   tier: ToolTier
   baseCost: number
   baseProduction: number
-  unlockCondition: UnlockCondition
+  unlockCondition?: UnlockCondition
   icon: string
-  color: string
+  color?: string
 }
 
 export interface OwnedTool {

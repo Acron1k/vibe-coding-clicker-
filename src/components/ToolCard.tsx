@@ -80,7 +80,7 @@ export const ToolCard = memo(function ToolCard({ tool, owned }: ToolCardProps) {
       {/* Stats */}
       <div className="flex items-center gap-3 text-xs mb-3">
         <div className="flex items-center gap-1.5 bg-white/80 px-2 py-1 rounded-lg">
-          <span className="text-ink-500">Produces:</span>
+          <span className="text-ink-500">Даёт:</span>
           <span className="text-coral-600 font-mono font-bold">
             {count > 0 ? formatPerSecond(production) : formatPerSecond(tool.baseProduction)}
           </span>
@@ -110,7 +110,7 @@ export const ToolCard = memo(function ToolCard({ tool, owned }: ToolCardProps) {
         } : undefined}
       >
         <span className="flex items-center justify-center gap-2">
-          <span>Buy</span>
+          <span>Купить</span>
           <span className="font-mono">{formatNumber(cost)} VB</span>
         </span>
       </button>

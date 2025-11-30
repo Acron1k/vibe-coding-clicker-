@@ -10,9 +10,9 @@ export function SubscriptionPanel() {
   if (Object.keys(ownedTools).length === 0) {
     return (
       <div className="card">
-        <h2 className="text-lg font-display font-bold text-ink-800 mb-3">Subscriptions</h2>
+        <h2 className="text-lg font-display font-bold text-ink-800 mb-3">Подписки</h2>
         <p className="text-ink-500 text-center py-4 text-sm">
-          Buy tools to upgrade their subscriptions
+          Купите инструменты чтобы улучшать их подписки
         </p>
       </div>
     )
@@ -20,7 +20,7 @@ export function SubscriptionPanel() {
 
   return (
     <div className="card">
-      <h2 className="text-lg font-display font-bold text-ink-800 mb-3">Subscriptions</h2>
+      <h2 className="text-lg font-display font-bold text-ink-800 mb-3">Подписки</h2>
       
       <div className="space-y-2">
         {Object.values(ownedTools).map((owned) => {
@@ -52,10 +52,10 @@ export function SubscriptionPanel() {
               <div className="text-[11px] text-ink-500 mb-2 flex flex-wrap gap-2">
                 <span className="bg-white px-2 py-0.5 rounded">×{currentSub.vbMultiplier} VB</span>
                 {currentSub.ptBonus > 0 && (
-                  <span className="bg-lime-100 text-lime-700 px-2 py-0.5 rounded">+{currentSub.ptBonus} PT/s</span>
+                  <span className="bg-lime-100 text-lime-700 px-2 py-0.5 rounded">+{currentSub.ptBonus} PT/с</span>
                 )}
                 {currentSub.critChance > 0 && (
-                  <span className="bg-orange-100 text-orange-700 px-2 py-0.5 rounded">{currentSub.critChance * 100}% crit</span>
+                  <span className="bg-orange-100 text-orange-700 px-2 py-0.5 rounded">{currentSub.critChance * 100}% крит</span>
                 )}
               </div>
 
@@ -79,13 +79,13 @@ export function SubscriptionPanel() {
                   }}
                 >
                   <span className="flex items-center justify-between w-full">
-                    <span>Upgrade to {nextSub.displayName}</span>
+                    <span>До {nextSub.displayName}</span>
                     <span className="font-mono">🔮 {nextSub.dpCost}</span>
                   </span>
                 </button>
               ) : (
                 <div className="text-center py-2 text-lime-600 text-xs font-display font-bold bg-lime-50 rounded-lg">
-                  ✨ Max Level!
+                  ✨ Максимальный уровень!
                 </div>
               )}
             </div>
@@ -95,7 +95,7 @@ export function SubscriptionPanel() {
 
       {/* Subscription legend */}
       <div className="mt-4 pt-3 border-t-2 border-ink-100">
-        <p className="text-[10px] text-ink-500 mb-2 font-display font-bold uppercase">Tiers:</p>
+        <p className="text-[10px] text-ink-500 mb-2 font-display font-bold uppercase">Уровни:</p>
         <div className="flex flex-wrap gap-1">
           {SUBSCRIPTION_ORDER.map((tier) => (
             <span

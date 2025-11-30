@@ -1,7 +1,6 @@
-import { useCallback, useRef, useEffect } from 'react'
+import { useCallback, useRef } from 'react'
 import { useGameStore } from '../store/gameStore'
 
-// Audio context singleton
 let audioContext: AudioContext | null = null
 
 const getAudioContext = () => {
@@ -11,8 +10,8 @@ const getAudioContext = () => {
   return audioContext
 }
 
-// Generate crisp click sound (like iPhone haptic)
-const createClickSound = (ctx: AudioContext, type: 'soft' | 'medium' | 'hard' = 'medium') => {
+// Soft thud/tap - like a muted vibration
+const createTapSound = (ctx: AudioContext, intensity: 'light' | 'medium' | 'heavy' = 'medium') => {
   const oscillator = ctx.createOscillator()
   const gainNode = ctx.createGain()
   const filter = ctx.createBiquadFilter()
@@ -23,164 +22,161 @@ const createClickSound = (ctx: AudioContext, type: 'soft' | 'medium' | 'hard' = 
   
   const now = ctx.currentTime
   
-  if (type === 'soft') {
-    // Soft tap - higher pitch, very short
-    oscillator.frequency.setValueAtTime(2400, now)
-    oscillator.frequency.exponentialRampToValueAtTime(1200, now + 0.03)
-    oscillator.type = 'sine'
-    
-    filter.type = 'lowpass'
-    filter.frequency.setValueAtTime(3000, now)
-    
-    gainNode.gain.setValueAtTime(0.15, now)
-    gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.05)
-    
+  // Low frequency for thud feeling
+  filter.type = 'lowpass'
+  oscillator.type = 'sine'
+  
+  if (intensity === 'light') {
+    oscillator.frequency.setValueAtTime(80, now)
+    oscillator.frequency.exponentialRampToValueAtTime(40, now + 0.03)
+    filter.frequency.setValueAtTime(150, now)
+    gainNode.gain.setValueAtTime(0.3, now)
+    gainNode.gain.exponentialRampToValueAtTime(0.001, now + 0.04)
     oscillator.start(now)
-    oscillator.stop(now + 0.05)
-  } else if (type === 'medium') {
-    // Medium tap - satisfying click
-    oscillator.frequency.setValueAtTime(1800, now)
-    oscillator.frequency.exponentialRampToValueAtTime(600, now + 0.04)
-    oscillator.type = 'sine'
-    
-    filter.type = 'lowpass'
-    filter.frequency.setValueAtTime(2500, now)
-    
-    gainNode.gain.setValueAtTime(0.2, now)
-    gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.08)
-    
+    oscillator.stop(now + 0.04)
+  } else if (intensity === 'medium') {
+    oscillator.frequency.setValueAtTime(100, now)
+    oscillator.frequency.exponentialRampToValueAtTime(50, now + 0.05)
+    filter.frequency.setValueAtTime(200, now)
+    gainNode.gain.setValueAtTime(0.4, now)
+    gainNode.gain.exponentialRampToValueAtTime(0.001, now + 0.06)
     oscillator.start(now)
-    oscillator.stop(now + 0.08)
+    oscillator.stop(now + 0.06)
   } else {
-    // Hard tap - deeper, more impact
-    oscillator.frequency.setValueAtTime(1200, now)
-    oscillator.frequency.exponentialRampToValueAtTime(300, now + 0.06)
-    oscillator.type = 'sine'
-    
-    filter.type = 'lowpass'
-    filter.frequency.setValueAtTime(2000, now)
-    
-    gainNode.gain.setValueAtTime(0.25, now)
-    gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.12)
-    
+    oscillator.frequency.setValueAtTime(120, now)
+    oscillator.frequency.exponentialRampToValueAtTime(40, now + 0.08)
+    filter.frequency.setValueAtTime(250, now)
+    gainNode.gain.setValueAtTime(0.5, now)
+    gainNode.gain.exponentialRampToValueAtTime(0.001, now + 0.1)
     oscillator.start(now)
-    oscillator.stop(now + 0.12)
+    oscillator.stop(now + 0.1)
   }
 }
 
-// Success/purchase sound
-const createSuccessSound = (ctx: AudioContext) => {
-  const frequencies = [523.25, 659.25, 783.99] // C5, E5, G5 chord
+// Double tap for success - two quick thuds
+const createSuccessTap = (ctx: AudioContext) => {
+  const now = ctx.currentTime
+  
+  // First tap
+  const osc1 = ctx.createOscillator()
+  const gain1 = ctx.createGain()
+  const filter1 = ctx.createBiquadFilter()
+  
+  osc1.connect(filter1)
+  filter1.connect(gain1)
+  gain1.connect(ctx.destination)
+  
+  osc1.type = 'sine'
+  osc1.frequency.setValueAtTime(100, now)
+  osc1.frequency.exponentialRampToValueAtTime(60, now + 0.04)
+  filter1.type = 'lowpass'
+  filter1.frequency.setValueAtTime(200, now)
+  gain1.gain.setValueAtTime(0.35, now)
+  gain1.gain.exponentialRampToValueAtTime(0.001, now + 0.05)
+  
+  osc1.start(now)
+  osc1.stop(now + 0.05)
+  
+  // Second tap (slightly higher)
+  const osc2 = ctx.createOscillator()
+  const gain2 = ctx.createGain()
+  const filter2 = ctx.createBiquadFilter()
+  
+  osc2.connect(filter2)
+  filter2.connect(gain2)
+  gain2.connect(ctx.destination)
+  
+  osc2.type = 'sine'
+  osc2.frequency.setValueAtTime(130, now + 0.06)
+  osc2.frequency.exponentialRampToValueAtTime(70, now + 0.1)
+  filter2.type = 'lowpass'
+  filter2.frequency.setValueAtTime(220, now + 0.06)
+  gain2.gain.setValueAtTime(0.4, now + 0.06)
+  gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.12)
+  
+  osc2.start(now + 0.06)
+  osc2.stop(now + 0.12)
+}
+
+// Heavy thud for crit
+const createCritTap = (ctx: AudioContext) => {
+  const now = ctx.currentTime
+  
+  const osc = ctx.createOscillator()
+  const gain = ctx.createGain()
+  const filter = ctx.createBiquadFilter()
+  
+  osc.connect(filter)
+  filter.connect(gain)
+  gain.connect(ctx.destination)
+  
+  osc.type = 'sine'
+  osc.frequency.setValueAtTime(150, now)
+  osc.frequency.exponentialRampToValueAtTime(30, now + 0.12)
+  filter.type = 'lowpass'
+  filter.frequency.setValueAtTime(300, now)
+  filter.frequency.exponentialRampToValueAtTime(100, now + 0.12)
+  gain.gain.setValueAtTime(0.6, now)
+  gain.gain.exponentialRampToValueAtTime(0.001, now + 0.15)
+  
+  osc.start(now)
+  osc.stop(now + 0.15)
+}
+
+// Soft buzz for error
+const createErrorTap = (ctx: AudioContext) => {
+  const now = ctx.currentTime
+  
+  const osc = ctx.createOscillator()
+  const gain = ctx.createGain()
+  const filter = ctx.createBiquadFilter()
+  
+  osc.connect(filter)
+  filter.connect(gain)
+  gain.connect(ctx.destination)
+  
+  osc.type = 'sine'
+  osc.frequency.setValueAtTime(60, now)
+  osc.frequency.setValueAtTime(50, now + 0.05)
+  osc.frequency.setValueAtTime(60, now + 0.1)
+  filter.type = 'lowpass'
+  filter.frequency.setValueAtTime(120, now)
+  gain.gain.setValueAtTime(0.25, now)
+  gain.gain.exponentialRampToValueAtTime(0.001, now + 0.15)
+  
+  osc.start(now)
+  osc.stop(now + 0.15)
+}
+
+// Triple ascending taps for milestone
+const createMilestoneTap = (ctx: AudioContext) => {
+  const now = ctx.currentTime
+  const frequencies = [80, 100, 130]
   
   frequencies.forEach((freq, i) => {
-    const oscillator = ctx.createOscillator()
-    const gainNode = ctx.createGain()
+    const delay = i * 0.07
+    const osc = ctx.createOscillator()
+    const gain = ctx.createGain()
+    const filter = ctx.createBiquadFilter()
     
-    oscillator.connect(gainNode)
-    gainNode.connect(ctx.destination)
+    osc.connect(filter)
+    filter.connect(gain)
+    gain.connect(ctx.destination)
     
-    const now = ctx.currentTime
-    const delay = i * 0.04
+    osc.type = 'sine'
+    osc.frequency.setValueAtTime(freq, now + delay)
+    osc.frequency.exponentialRampToValueAtTime(freq * 0.5, now + delay + 0.05)
+    filter.type = 'lowpass'
+    filter.frequency.setValueAtTime(200 + i * 30, now + delay)
+    gain.gain.setValueAtTime(0.35, now + delay)
+    gain.gain.exponentialRampToValueAtTime(0.001, now + delay + 0.06)
     
-    oscillator.frequency.setValueAtTime(freq, now + delay)
-    oscillator.type = 'sine'
-    
-    gainNode.gain.setValueAtTime(0, now + delay)
-    gainNode.gain.linearRampToValueAtTime(0.12, now + delay + 0.02)
-    gainNode.gain.exponentialRampToValueAtTime(0.01, now + delay + 0.2)
-    
-    oscillator.start(now + delay)
-    oscillator.stop(now + delay + 0.2)
+    osc.start(now + delay)
+    osc.stop(now + delay + 0.06)
   })
 }
 
-// Level up / milestone sound
-const createMilestoneSound = (ctx: AudioContext) => {
-  const frequencies = [392, 523.25, 659.25, 783.99] // G4, C5, E5, G5 arpeggio
-  
-  frequencies.forEach((freq, i) => {
-    const oscillator = ctx.createOscillator()
-    const gainNode = ctx.createGain()
-    
-    oscillator.connect(gainNode)
-    gainNode.connect(ctx.destination)
-    
-    const now = ctx.currentTime
-    const delay = i * 0.08
-    
-    oscillator.frequency.setValueAtTime(freq, now + delay)
-    oscillator.type = 'sine'
-    
-    gainNode.gain.setValueAtTime(0, now + delay)
-    gainNode.gain.linearRampToValueAtTime(0.15, now + delay + 0.02)
-    gainNode.gain.exponentialRampToValueAtTime(0.01, now + delay + 0.3)
-    
-    oscillator.start(now + delay)
-    oscillator.stop(now + delay + 0.3)
-  })
-}
-
-// Critical hit sound
-const createCritSound = (ctx: AudioContext) => {
-  // Impact sound
-  const oscillator1 = ctx.createOscillator()
-  const gainNode1 = ctx.createGain()
-  
-  oscillator1.connect(gainNode1)
-  gainNode1.connect(ctx.destination)
-  
-  const now = ctx.currentTime
-  
-  oscillator1.frequency.setValueAtTime(300, now)
-  oscillator1.frequency.exponentialRampToValueAtTime(100, now + 0.1)
-  oscillator1.type = 'sine'
-  
-  gainNode1.gain.setValueAtTime(0.2, now)
-  gainNode1.gain.exponentialRampToValueAtTime(0.01, now + 0.15)
-  
-  oscillator1.start(now)
-  oscillator1.stop(now + 0.15)
-  
-  // Sparkle overlay
-  const oscillator2 = ctx.createOscillator()
-  const gainNode2 = ctx.createGain()
-  
-  oscillator2.connect(gainNode2)
-  gainNode2.connect(ctx.destination)
-  
-  oscillator2.frequency.setValueAtTime(2000, now)
-  oscillator2.frequency.exponentialRampToValueAtTime(3000, now + 0.1)
-  oscillator2.type = 'sine'
-  
-  gainNode2.gain.setValueAtTime(0.08, now)
-  gainNode2.gain.exponentialRampToValueAtTime(0.01, now + 0.15)
-  
-  oscillator2.start(now)
-  oscillator2.stop(now + 0.15)
-}
-
-// Error/can't afford sound
-const createErrorSound = (ctx: AudioContext) => {
-  const oscillator = ctx.createOscillator()
-  const gainNode = ctx.createGain()
-  
-  oscillator.connect(gainNode)
-  gainNode.connect(ctx.destination)
-  
-  const now = ctx.currentTime
-  
-  oscillator.frequency.setValueAtTime(200, now)
-  oscillator.frequency.setValueAtTime(150, now + 0.1)
-  oscillator.type = 'sine'
-  
-  gainNode.gain.setValueAtTime(0.15, now)
-  gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.2)
-  
-  oscillator.start(now)
-  oscillator.stop(now + 0.2)
-}
-
-export type SoundType = 'click' | 'click-soft' | 'click-hard' | 'success' | 'milestone' | 'crit' | 'error'
+export type SoundType = 'tap' | 'tap-light' | 'tap-heavy' | 'success' | 'milestone' | 'crit' | 'error'
 
 export function useSound() {
   const soundEnabled = useGameStore((s) => s.settings.soundEnabled)
@@ -189,9 +185,8 @@ export function useSound() {
   const playSound = useCallback((type: SoundType) => {
     if (!soundEnabled) return
     
-    // Throttle sounds to prevent audio spam
     const now = Date.now()
-    const minInterval = type.startsWith('click') ? 30 : 100
+    const minInterval = type.startsWith('tap') ? 25 : 80
     if (lastPlayTime.current[type] && now - lastPlayTime.current[type] < minInterval) {
       return
     }
@@ -200,36 +195,34 @@ export function useSound() {
     try {
       const ctx = getAudioContext()
       
-      // Resume audio context if suspended (browser autoplay policy)
       if (ctx.state === 'suspended') {
         ctx.resume()
       }
       
       switch (type) {
-        case 'click':
-          createClickSound(ctx, 'medium')
+        case 'tap':
+          createTapSound(ctx, 'medium')
           break
-        case 'click-soft':
-          createClickSound(ctx, 'soft')
+        case 'tap-light':
+          createTapSound(ctx, 'light')
           break
-        case 'click-hard':
-          createClickSound(ctx, 'hard')
+        case 'tap-heavy':
+          createTapSound(ctx, 'heavy')
           break
         case 'success':
-          createSuccessSound(ctx)
+          createSuccessTap(ctx)
           break
         case 'milestone':
-          createMilestoneSound(ctx)
+          createMilestoneTap(ctx)
           break
         case 'crit':
-          createCritSound(ctx)
+          createCritTap(ctx)
           break
         case 'error':
-          createErrorSound(ctx)
+          createErrorTap(ctx)
           break
       }
     } catch (e) {
-      // Silently fail if audio not supported
       console.warn('Audio not supported:', e)
     }
   }, [soundEnabled])
@@ -237,27 +230,6 @@ export function useSound() {
   return { playSound }
 }
 
-// Hook for initializing audio on first user interaction
 export function useAudioInit() {
-  useEffect(() => {
-    const initAudio = () => {
-      try {
-        const ctx = getAudioContext()
-        if (ctx.state === 'suspended') {
-          ctx.resume()
-        }
-      } catch (e) {
-        // Ignore
-      }
-    }
-    
-    // Initialize on first click/touch
-    document.addEventListener('click', initAudio, { once: true })
-    document.addEventListener('touchstart', initAudio, { once: true })
-    
-    return () => {
-      document.removeEventListener('click', initAudio)
-      document.removeEventListener('touchstart', initAudio)
-    }
-  }, [])
+  // Audio context will be created on first sound play
 }

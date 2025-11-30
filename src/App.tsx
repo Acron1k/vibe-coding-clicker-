@@ -26,10 +26,10 @@ function App() {
   const toggleSound = useGameStore((s) => s.toggleSound)
 
   const tabs: { id: Tab; label: string; icon: string }[] = [
-    { id: 'tools', label: 'Tools', icon: '🛠️' },
-    { id: 'upgrades', label: 'Upgrades', icon: '⬆️' },
-    { id: 'milestones', label: 'Goals', icon: '🏆' },
-    { id: 'stats', label: 'Stats', icon: '📊' },
+    { id: 'tools', label: 'Инструменты', icon: '🛠️' },
+    { id: 'upgrades', label: 'Улучшения', icon: '⬆️' },
+    { id: 'milestones', label: 'Цели', icon: '🏆' },
+    { id: 'stats', label: 'Статистика', icon: '📊' },
   ]
 
   return (
@@ -40,7 +40,7 @@ function App() {
       {isDemoMode && (
         <div className="demo-banner">
           <span className="font-display font-bold text-teal-800 text-sm">
-            🚀 DEMO MODE — x1,000,000 multiplier active!
+            🚀 ДЕМО РЕЖИМ — множитель x1,000,000 активен!
           </span>
         </div>
       )}
@@ -73,7 +73,7 @@ function App() {
           <div className="flex flex-col items-center justify-center min-h-[500px]">
             <ClickButton />
             <p className="mt-8 text-ink-500 text-center font-body text-lg">
-              Click to write a <span className="text-coral-500 font-semibold">prompt</span>
+              Кликай чтобы писать <span className="text-coral-500 font-semibold">промпты</span>
             </p>
             
             {/* Decorative element */}
@@ -99,7 +99,7 @@ function App() {
           <div className="flex flex-col items-center justify-center py-8">
             <ClickButton />
             <p className="mt-6 text-ink-500 text-center text-base">
-              Tap to write a <span className="text-coral-500 font-semibold">prompt</span>
+              Тапай чтобы писать <span className="text-coral-500 font-semibold">промпты</span>
             </p>
           </div>
 
@@ -162,13 +162,13 @@ function App() {
             </button>
             <button 
               onClick={() => {
-                if (confirm('Reset all progress?')) {
+                if (confirm('Сбросить весь прогресс?')) {
                   resetGame()
                 }
               }}
               className="text-coral-500 hover:text-coral-600 font-semibold transition-colors text-xs"
             >
-              Reset
+              Сброс
             </button>
           </div>
         </div>

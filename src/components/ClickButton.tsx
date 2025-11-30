@@ -62,7 +62,7 @@ export function ClickButton() {
     if (isCrit) {
       playSound('crit')
     } else {
-      playSound('click')
+      playSound('tap')
     }
 
     const rect = buttonRef.current?.getBoundingClientRect()
@@ -167,7 +167,7 @@ export function ClickButton() {
         
         {/* Text */}
         <span className="relative text-xl md:text-2xl font-display font-bold text-white z-10 tracking-wide pointer-events-none mt-1">
-          Prompt
+          Промпт
         </span>
         
         {/* Value display */}

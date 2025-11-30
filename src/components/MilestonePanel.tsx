@@ -29,7 +29,7 @@ export function MilestonePanel() {
   return (
     <div className="card">
       <div className="flex items-center justify-between mb-3">
-        <h2 className="text-lg font-display font-bold text-ink-800">Goals</h2>
+        <h2 className="text-lg font-display font-bold text-ink-800">Цели</h2>
         <span className="text-xs font-mono bg-paper-200 px-2 py-1 rounded-lg border border-ink-200 text-ink-600">
           {completedMilestones.length}/{MILESTONES.length}
         </span>
