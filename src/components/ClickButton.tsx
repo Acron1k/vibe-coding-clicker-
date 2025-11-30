@@ -56,9 +56,16 @@ export function ClickButton() {
     }
   }, [handleClick, getClickValue, isMobile])
 
-  const onPointerDown = useCallback((e: React.PointerEvent<HTMLButtonElement>) => {
-    e.preventDefault()
+  const onClick = useCallback((e: React.MouseEvent<HTMLButtonElement>) => {
     processClick(e.clientX, e.clientY)
+  }, [processClick])
+
+  const onTouchStart = useCallback((e: React.TouchEvent<HTMLButtonElement>) => {
+    e.preventDefault()
+    const touch = e.touches[0]
+    if (touch) {
+      processClick(touch.clientX, touch.clientY)
+    }
   }, [processClick])
 
   return (
@@ -76,7 +83,8 @@ export function ClickButton() {
       {/* Main button */}
       <motion.button
         ref={buttonRef}
-        onPointerDown={onPointerDown}
+        onClick={onClick}
+        onTouchStart={onTouchStart}
         className="click-button relative w-48 h-48 md:w-56 md:h-56 lg:w-64 lg:h-64 rounded-full 
                    flex flex-col items-center justify-center gap-2 cursor-pointer
                    border-2 border-neon-cyan/30 transition-all duration-200
