@@ -1,5 +1,4 @@
-import { useState, useCallback, useRef } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { useState, useCallback, useRef, memo } from 'react'
 import { useGameStore } from '../store/gameStore'
 import { formatNumber } from '../utils/formatters'
 import { useIsMobile } from '../hooks/useIsMobile'
@@ -12,167 +11,168 @@ interface FloatingNumber {
   isCrit: boolean
 }
 
-const MAX_FLOATING_NUMBERS = 6
+const MAX_FLOATING_NUMBERS_DESKTOP = 6
+const MAX_FLOATING_NUMBERS_MOBILE = 3
+
+const FloatingNumberComponent = memo(({ num, onComplete }: { num: FloatingNumber; onComplete: (id: number) => void }) => {
+  return (
+    <div
+      className={`floating-number absolute pointer-events-none font-bold font-mono z-20 ${
+        num.isCrit ? 'text-neon-yellow text-xl' : 'text-neon-green text-base'
+      }`}
+      style={{
+        left: num.x,
+        top: num.y,
+        transform: 'translate(-50%, -50%)',
+      }}
+      onAnimationEnd={() => onComplete(num.id)}
+    >
+      {num.isCrit && <span className="mr-1">CRIT!</span>}
+      +{formatNumber(num.value)}
+    </div>
+  )
+})
+
+FloatingNumberComponent.displayName = 'FloatingNumber'
 
 export function ClickButton() {
   const handleClick = useGameStore((s) => s.handleClick)
   const getClickValue = useGameStore((s) => s.getClickValue)
   const [floatingNumbers, setFloatingNumbers] = useState<FloatingNumber[]>([])
-  const [ripples, setRipples] = useState<{ id: number; x: number; y: number }[]>([])
+  const [isPressed, setIsPressed] = useState(false)
   const idCounter = useRef(0)
-  const buttonRef = useRef<HTMLButtonElement>(null)
+  const buttonRef = useRef<HTMLDivElement>(null)
   const isMobile = useIsMobile()
+  const maxFloating = isMobile ? MAX_FLOATING_NUMBERS_MOBILE : MAX_FLOATING_NUMBERS_DESKTOP
+
+  const removeFloatingNumber = useCallback((id: number) => {
+    setFloatingNumbers((prev) => prev.filter((n) => n.id !== id))
+  }, [])
 
   const processClick = useCallback((clientX: number, clientY: number) => {
     const earnedValue = handleClick()
     const clickValue = getClickValue()
     const isCrit = earnedValue > clickValue
-    
+
     const rect = buttonRef.current?.getBoundingClientRect()
     if (rect) {
       const x = clientX - rect.left
       const y = clientY - rect.top
-      
+
       const newId = idCounter.current++
-      
+
       setFloatingNumbers((prev) => {
         const updated = [...prev, { id: newId, value: earnedValue, x, y, isCrit }]
-        if (updated.length > MAX_FLOATING_NUMBERS) {
-          return updated.slice(-MAX_FLOATING_NUMBERS)
+        if (updated.length > maxFloating) {
+          return updated.slice(-maxFloating)
         }
         return updated
       })
-      
-      if (!isMobile) {
-        setRipples((prev) => [...prev, { id: newId, x, y }])
-      }
-      
-      setTimeout(() => {
-        setFloatingNumbers((prev) => prev.filter((n) => n.id !== newId))
-        if (!isMobile) {
-          setRipples((prev) => prev.filter((r) => r.id !== newId))
-        }
-      }, 800)
     }
-  }, [handleClick, getClickValue, isMobile])
+  }, [handleClick, getClickValue, maxFloating])
 
-  const onClick = useCallback((e: React.MouseEvent<HTMLButtonElement>) => {
+  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    e.preventDefault()
+    setIsPressed(true)
     processClick(e.clientX, e.clientY)
   }, [processClick])
 
-  const onTouchStart = useCallback((e: React.TouchEvent<HTMLButtonElement>) => {
+  const handleMouseUp = useCallback(() => {
+    setIsPressed(false)
+  }, [])
+
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
     e.preventDefault()
+    setIsPressed(true)
     const touch = e.touches[0]
     if (touch) {
       processClick(touch.clientX, touch.clientY)
     }
   }, [processClick])
 
+  const handleTouchEnd = useCallback(() => {
+    setIsPressed(false)
+  }, [])
+
   return (
-    <div className="relative flex items-center justify-center">
-      {/* Outer glow rings - simplified on mobile */}
+    <div className="relative flex items-center justify-center select-none">
+      {/* Outer glow rings - desktop only, CSS animation */}
       {!isMobile && (
         <>
-          <div className="absolute w-72 h-72 md:w-80 md:h-80 rounded-full opacity-20 animate-pulse-glow"
-               style={{ background: 'radial-gradient(circle, rgba(0,217,255,0.3) 0%, transparent 70%)' }} />
-          <div className="absolute w-64 h-64 md:w-72 md:h-72 rounded-full opacity-30 animate-pulse-glow"
-               style={{ background: 'radial-gradient(circle, rgba(201,4,237,0.3) 0%, transparent 70%)', animationDelay: '0.5s' }} />
+          <div 
+            className="absolute w-72 h-72 md:w-80 md:h-80 rounded-full opacity-20 animate-pulse pointer-events-none"
+            style={{ background: 'radial-gradient(circle, rgba(0,217,255,0.3) 0%, transparent 70%)' }} 
+          />
+          <div 
+            className="absolute w-64 h-64 md:w-72 md:h-72 rounded-full opacity-30 animate-pulse pointer-events-none"
+            style={{ background: 'radial-gradient(circle, rgba(201,4,237,0.3) 0%, transparent 70%)', animationDelay: '0.5s' }} 
+          />
         </>
       )}
-      
-      {/* Main button */}
-      <motion.button
+
+      {/* Main clickable button */}
+      <div
         ref={buttonRef}
-        onClick={onClick}
-        onTouchStart={onTouchStart}
-        className="click-button relative w-48 h-48 md:w-56 md:h-56 lg:w-64 lg:h-64 rounded-full 
+        role="button"
+        tabIndex={0}
+        onMouseDown={handleMouseDown}
+        onMouseUp={handleMouseUp}
+        onMouseLeave={handleMouseUp}
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
+        onTouchCancel={handleTouchEnd}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault()
+            const rect = buttonRef.current?.getBoundingClientRect()
+            if (rect) {
+              processClick(rect.left + rect.width / 2, rect.top + rect.height / 2)
+            }
+          }
+        }}
+        className={`click-button relative w-48 h-48 md:w-56 md:h-56 lg:w-64 lg:h-64 rounded-full 
                    flex flex-col items-center justify-center gap-2 cursor-pointer
-                   border-2 border-neon-cyan/30 transition-all duration-200
+                   border-2 border-neon-cyan/30
                    focus:outline-none focus:ring-4 focus:ring-neon-cyan/30
-                   select-none"
-        style={{ touchAction: 'manipulation', willChange: 'transform' }}
-        whileHover={isMobile ? undefined : { scale: 1.05 }}
-        whileTap={{ scale: 0.95 }}
+                   select-none transition-transform duration-100
+                   ${isPressed ? 'scale-95' : 'scale-100 hover:scale-105'}`}
+        style={{ 
+          touchAction: 'manipulation',
+          WebkitTapHighlightColor: 'transparent',
+          WebkitTouchCallout: 'none',
+          userSelect: 'none',
+        }}
         aria-label="Click to generate Vibe Codes"
       >
-        {/* Inner glow */}
-        <div className="absolute inset-4 rounded-full bg-gradient-to-br from-neon-cyan/20 to-neon-purple/20 blur-xl" />
-        
-        {/* Icon/Text */}
-        <motion.span 
-          className="relative text-5xl md:text-6xl z-10"
-          animate={isMobile ? undefined : { rotate: [0, 5, -5, 0] }}
-          transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-        >
+        {/* Inner glow - pointer-events-none */}
+        <div className="absolute inset-4 rounded-full bg-gradient-to-br from-neon-cyan/20 to-neon-purple/20 blur-xl pointer-events-none" />
+
+        {/* Icon */}
+        <span className={`relative text-5xl md:text-6xl z-10 pointer-events-none ${!isMobile ? 'animate-wiggle' : ''}`}>
           ⚡
-        </motion.span>
-        <span className="relative text-xl md:text-2xl font-bold text-white z-10 tracking-wider">
+        </span>
+        <span className="relative text-xl md:text-2xl font-bold text-white z-10 tracking-wider pointer-events-none">
           Prompt
         </span>
-        <span className="relative text-sm text-neon-cyan z-10 font-mono">
+        <span className="relative text-sm text-neon-cyan z-10 font-mono pointer-events-none">
           +{formatNumber(getClickValue())} VB
         </span>
-        
-        {/* Ripple effects - desktop only */}
-        {!isMobile && (
-          <AnimatePresence>
-            {ripples.map((ripple) => (
-              <motion.div
-                key={ripple.id}
-                className="absolute rounded-full bg-neon-cyan/30 pointer-events-none"
-                style={{ left: ripple.x, top: ripple.y, willChange: 'transform, opacity' }}
-                initial={{ width: 0, height: 0, x: 0, y: 0, opacity: 0.5 }}
-                animate={{ width: 200, height: 200, x: -100, y: -100, opacity: 0 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.6, ease: "easeOut" }}
-              />
-            ))}
-          </AnimatePresence>
-        )}
-      </motion.button>
-      
-      {/* Floating numbers */}
-      <AnimatePresence>
-        {floatingNumbers.map((num) => (
-          <motion.div
-            key={num.id}
-            className={`absolute pointer-events-none font-bold font-mono z-20 ${
-              num.isCrit ? 'text-neon-yellow text-2xl md:text-3xl' : 'text-neon-green text-lg md:text-xl'
-            }`}
-            style={{ 
-              left: `calc(50% + ${num.x - 112}px)`, 
-              top: `calc(50% + ${num.y - 112}px)`,
-              willChange: 'transform, opacity'
-            }}
-            initial={{ opacity: 1, y: 0, scale: num.isCrit ? 1.3 : 1 }}
-            animate={{ opacity: 0, y: -60, scale: num.isCrit ? 1.6 : 1.1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.6, ease: "easeOut" }}
-          >
-            {num.isCrit && <span className="mr-1">CRIT!</span>}
-            +{formatNumber(num.value)}
-          </motion.div>
-        ))}
-      </AnimatePresence>
-      
-      {/* Decorative orbital elements - desktop only */}
+      </div>
+
+      {/* Floating numbers - CSS animated */}
+      {floatingNumbers.map((num) => (
+        <FloatingNumberComponent key={num.id} num={num} onComplete={removeFloatingNumber} />
+      ))}
+
+      {/* Decorative orbital elements - desktop only, CSS animated */}
       {!isMobile && (
         <>
-          <motion.div
-            className="absolute w-60 h-60 md:w-68 md:h-68 lg:w-76 lg:h-76 rounded-full border border-neon-cyan/20"
-            animate={{ rotate: 360 }}
-            transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
-          >
+          <div className="absolute w-60 h-60 md:w-68 md:h-68 lg:w-76 lg:h-76 rounded-full border border-neon-cyan/20 animate-spin-slow pointer-events-none">
             <div className="absolute -top-1 left-1/2 w-2 h-2 bg-neon-cyan rounded-full shadow-neon-cyan" />
-          </motion.div>
-          
-          <motion.div
-            className="absolute w-68 h-68 md:w-76 md:h-76 lg:w-84 lg:h-84 rounded-full border border-neon-purple/20"
-            animate={{ rotate: -360 }}
-            transition={{ duration: 30, repeat: Infinity, ease: "linear" }}
-          >
+          </div>
+          <div className="absolute w-68 h-68 md:w-76 md:h-76 lg:w-84 lg:h-84 rounded-full border border-neon-purple/20 animate-spin-slower pointer-events-none">
             <div className="absolute -top-1 left-1/2 w-2 h-2 bg-neon-purple rounded-full shadow-neon-purple" />
-          </motion.div>
+          </div>
         </>
       )}
     </div>

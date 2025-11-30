@@ -304,6 +304,77 @@
   }
 }
 
+/* GPU-accelerated animations for performance */
+@keyframes float-up {
+  0% {
+    opacity: 1;
+    transform: translate(-50%, -50%) translateY(0) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) translateY(-60px) scale(1.1);
+  }
+}
+
+@keyframes wiggle {
+  0%, 100% { transform: rotate(0deg); }
+  25% { transform: rotate(5deg); }
+  75% { transform: rotate(-5deg); }
+}
+
+@keyframes spin-slow {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes spin-slower {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(-360deg); }
+}
+
+@keyframes scan-line {
+  0% { top: -10%; }
+  100% { top: 110%; }
+}
+
+.scan-line-effect {
+  animation: scan-line 8s linear infinite;
+  will-change: top;
+}
+
+.floating-number {
+  animation: float-up 0.6s ease-out forwards;
+  will-change: transform, opacity;
+}
+
+.animate-wiggle {
+  animation: wiggle 2s ease-in-out infinite;
+  will-change: transform;
+}
+
+.animate-spin-slow {
+  animation: spin-slow 20s linear infinite;
+  will-change: transform;
+}
+
+.animate-spin-slower {
+  animation: spin-slower 30s linear infinite;
+  will-change: transform;
+}
+
+/* Disable animations on mobile for better performance */
+@media (max-width: 768px), (hover: none) {
+  .animate-wiggle,
+  .animate-spin-slow,
+  .animate-spin-slower {
+    animation: none !important;
+  }
+  
+  .floating-number {
+    animation-duration: 0.4s;
+  }
+}
+
 /* Utility classes */
 @layer utilities {
   .text-gradient {

@@ -1,5 +1,4 @@
 import { useEffect, useRef, useMemo } from 'react'
-import { motion } from 'framer-motion'
 import { useIsMobile } from '../hooks/useIsMobile'
 
 export function Background() {
@@ -23,14 +22,10 @@ export function Background() {
       {/* Floating code particles - disabled on mobile for performance */}
       {!isMobile && <MatrixRain />}
       
-      {/* Scan line effect - desktop only */}
+      {/* Scan line effect - desktop only, CSS animated */}
       {!isMobile && (
         <div className="absolute inset-0 pointer-events-none overflow-hidden">
-          <motion.div
-            className="absolute left-0 right-0 h-px bg-gradient-to-r from-transparent via-neon-cyan/30 to-transparent"
-            animate={{ top: ['-10%', '110%'] }}
-            transition={{ duration: 8, repeat: Infinity, ease: 'linear' }}
-          />
+          <div className="scan-line-effect absolute left-0 right-0 h-px bg-gradient-to-r from-transparent via-neon-cyan/30 to-transparent" />
         </div>
       )}
       
