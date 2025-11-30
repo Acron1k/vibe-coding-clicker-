@@ -28,7 +28,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   const apiKey = process.env.OPENROUTER_API_KEY
   if (!apiKey) {
-    return res.status(500).json({ error: 'API key not configured' })
+    console.error('OPENROUTER_API_KEY not found in environment')
+    return res.status(500).json({ error: 'API key not configured. Add OPENROUTER_API_KEY to Vercel environment variables.' })
   }
 
   try {
@@ -40,6 +41,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (!lastThreeTools || lastThreeTools.length < 1) {
       return res.status(400).json({ error: 'lastThreeTools required' })
     }
+
+    console.log(`Generating tool #${toolIndex} for user...`)
 
     const toolsList = lastThreeTools
       .map((t, i) => `${i + 1}. ${t.icon} ${t.name} - ${t.description}`)
@@ -53,13 +56,15 @@ ${toolsList}
 Придумай ОДИН следующий инструмент, который МОЩНЕЕ и ФУТУРИСТИЧНЕЕ предыдущих.
 Это инструмент №${toolIndex} в игре - он должен быть невероятно продвинутым.
 
-Темы: космические технологии, квантовые вычисления, управление реальностью, создание вселенных, божественные силы.
+Темы: космические технологии, квантовые вычисления, управление реальностью, создание вселенных, божественные силы, мультивселенные.
 
-ВАЖНО: Ответь ТОЛЬКО валидным JSON без markdown, без \`\`\`:
+КРИТИЧЕСКИ ВАЖНО: Ответь ТОЛЬКО валидным JSON без markdown, без \`\`\`, без пояснений:
 {"name": "Название на английском", "description": "Краткое описание на русском (до 50 символов)", "icon": "один эмодзи"}
 
-Пример ответа:
-{"name": "Quantum Dreamer", "description": "Материализует сны в реальность", "icon": "💫"}`
+Примеры хороших ответов:
+{"name": "Quantum Dreamer", "description": "Материализует сны в реальность", "icon": "💫"}
+{"name": "Reality Compiler", "description": "Компилирует код в физическую материю", "icon": "🌌"}
+{"name": "Cosmic Architect", "description": "Проектирует законы физики", "icon": "🏛️"}`
 
     const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
@@ -70,61 +75,81 @@ ${toolsList}
         'X-Title': 'Vibecode Clicker'
       },
       body: JSON.stringify({
-        model: 'x-ai/grok-3-fast:free',
+        model: 'x-ai/grok-4.1-fast:free',
         messages: [
           { role: 'user', content: prompt }
         ],
         max_tokens: 150,
-        temperature: 0.9
+        temperature: 0.95
       })
     })
 
     if (!response.ok) {
       const errorText = await response.text()
-      console.error('OpenRouter error:', errorText)
-      return res.status(500).json({ error: 'AI generation failed', details: errorText })
+      console.error('OpenRouter error:', response.status, errorText)
+      return res.status(500).json({ 
+        error: 'AI service error', 
+        details: `Status ${response.status}: ${errorText}` 
+      })
     }
 
     const data = await response.json()
     const content = data.choices?.[0]?.message?.content
 
+    console.log('AI response:', content)
+
     if (!content) {
       return res.status(500).json({ error: 'Empty response from AI' })
     }
 
-    // Parse JSON from response
+    // Parse JSON from response - NO FALLBACK, must succeed
     let generatedTool: GeneratedTool
+    
+    // Try to extract JSON from the response
+    const jsonMatch = content.match(/\{[\s\S]*?\}/)
+    if (!jsonMatch) {
+      console.error('No JSON found in response:', content)
+      return res.status(500).json({ 
+        error: 'AI returned invalid format', 
+        details: 'No JSON object found in response',
+        raw: content 
+      })
+    }
+    
     try {
-      // Try to extract JSON from the response
-      const jsonMatch = content.match(/\{[\s\S]*\}/)
-      if (jsonMatch) {
-        generatedTool = JSON.parse(jsonMatch[0])
-      } else {
-        throw new Error('No JSON found')
-      }
+      generatedTool = JSON.parse(jsonMatch[0])
     } catch (parseError) {
-      console.error('Parse error:', content)
-      // Fallback tool
-      generatedTool = {
-        name: `AI Tool ${toolIndex}`,
-        description: 'Загадочный ИИ инструмент будущего',
-        icon: '🔮'
-      }
+      console.error('JSON parse error:', jsonMatch[0])
+      return res.status(500).json({ 
+        error: 'Failed to parse AI response', 
+        details: String(parseError),
+        raw: jsonMatch[0]
+      })
     }
 
-    // Validate and sanitize
+    // Validate required fields
+    if (!generatedTool.name || !generatedTool.description || !generatedTool.icon) {
+      console.error('Missing required fields:', generatedTool)
+      return res.status(500).json({ 
+        error: 'AI response missing required fields',
+        received: generatedTool
+      })
+    }
+
+    // Sanitize
     const result: GeneratedTool = {
-      name: String(generatedTool.name || `Tool ${toolIndex}`).slice(0, 30),
-      description: String(generatedTool.description || 'Мощный ИИ инструмент').slice(0, 60),
-      icon: String(generatedTool.icon || '🤖').slice(0, 4)
+      name: String(generatedTool.name).trim().slice(0, 30),
+      description: String(generatedTool.description).trim().slice(0, 60),
+      icon: String(generatedTool.icon).trim().slice(0, 4)
     }
 
+    console.log('Generated tool:', result)
     return res.status(200).json(result)
 
   } catch (error) {
     console.error('Handler error:', error)
     return res.status(500).json({ 
-      error: 'Internal error', 
+      error: 'Internal server error', 
       message: error instanceof Error ? error.message : 'Unknown error' 
     })
   }

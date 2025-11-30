@@ -78,7 +78,8 @@ export function ToolList() {
         
       } catch (error) {
         console.error('Generation failed:', error)
-        setGenerationError('Не удалось сгенерировать инструмент')
+        const errorMessage = error instanceof Error ? error.message : 'Неизвестная ошибка'
+        setGenerationError(`Ошибка: ${errorMessage}`)
       } finally {
         setIsGenerating(false)
         // Delay unlock to prevent rapid re-trigger
@@ -118,7 +119,8 @@ export function ToolList() {
       
     } catch (error) {
       console.error('Generation failed:', error)
-      setGenerationError('Не удалось сгенерировать инструмент')
+      const errorMessage = error instanceof Error ? error.message : 'Неизвестная ошибка'
+      setGenerationError(`Ошибка: ${errorMessage}`)
     } finally {
       setIsGenerating(false)
       setTimeout(() => {

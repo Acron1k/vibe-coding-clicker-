@@ -14,6 +14,7 @@ interface GenerateToolParams {
 
 /**
  * Генерирует новый ИИ инструмент через API
+ * БЕЗ FALLBACK - только реальная генерация через ИИ
  */
 export async function generateNextTool(params: GenerateToolParams): Promise<AIToolDefinition> {
   const { lastThreeTools, toolIndex, previousTool } = params
@@ -24,99 +25,47 @@ export async function generateNextTool(params: GenerateToolParams): Promise<AITo
   const ptGeneration = Math.floor((previousTool.ptGeneration || 0) * 2.1) || Math.floor(toolIndex * 1000)
   const dpGeneration = Math.floor((previousTool.dpGeneration || 0) * 2.0) || Math.floor(toolIndex * 100)
 
-  try {
-    const response = await fetch('/api/generate-tool', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        lastThreeTools: lastThreeTools.map(t => ({
-          name: t.name,
-          description: t.description,
-          icon: t.icon
-        })),
-        toolIndex
-      })
+  console.log('Generating tool #' + toolIndex + ' via AI...')
+
+  const response = await fetch('/api/generate-tool', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      lastThreeTools: lastThreeTools.map(t => ({
+        name: t.name,
+        description: t.description,
+        icon: t.icon
+      })),
+      toolIndex
     })
+  })
 
-    if (!response.ok) {
-      throw new Error(`API error: ${response.status}`)
-    }
-
-    const generated: GeneratedToolData = await response.json()
-
-    return {
-      id: `generated-${toolIndex}`,
-      name: generated.name,
-      description: generated.description,
-      icon: generated.icon,
-      baseCost,
-      baseProduction,
-      tier: 3,
-      ptGeneration,
-      dpGeneration
-    }
-
-  } catch (error) {
-    console.error('Tool generation failed:', error)
-    
-    // Fallback - генерируем локально
-    return generateFallbackTool(toolIndex, baseCost, baseProduction, ptGeneration, dpGeneration)
+  if (!response.ok) {
+    const errorText = await response.text()
+    console.error('API error:', response.status, errorText)
+    throw new Error(`Ошибка генерации: ${response.status}. ${errorText}`)
   }
-}
 
-/**
- * Fallback генератор если API недоступен
- */
-function generateFallbackTool(
-  index: number,
-  baseCost: number,
-  baseProduction: number,
-  ptGeneration: number,
-  dpGeneration: number
-): AIToolDefinition {
-  const fallbackNames = [
-    { name: 'Quantum Mind', icon: '🧬', desc: 'Квантовое мышление без границ' },
-    { name: 'Reality Weaver', icon: '🌀', desc: 'Плетёт ткань реальности' },
-    { name: 'Cosmic Oracle', icon: '🔮', desc: 'Видит все временные линии' },
-    { name: 'Void Architect', icon: '🕳️', desc: 'Строит в пустоте между мирами' },
-    { name: 'Star Forge', icon: '⭐', desc: 'Кузница звёзд и галактик' },
-    { name: 'Infinity Engine', icon: '♾️', desc: 'Двигатель бесконечности' },
-    { name: 'Dream Compiler', icon: '💭', desc: 'Компилирует сны в код' },
-    { name: 'Multiverse Key', icon: '🗝️', desc: 'Ключ ко всем вселенным' },
-    { name: 'Time Sculptor', icon: '⏳', desc: 'Лепит время как глину' },
-    { name: 'Genesis Core', icon: '💫', desc: 'Ядро творения миров' },
-    { name: 'Omega Protocol', icon: 'Ω', desc: 'Финальный протокол эволюции' },
-    { name: 'Absolute Mind', icon: '🧠', desc: 'Абсолютный разум вселенной' },
-  ]
+  const generated: GeneratedToolData = await response.json()
 
-  const fallbackIndex = (index - 19) % fallbackNames.length
-  const fallback = fallbackNames[fallbackIndex]
+  if (!generated.name || !generated.description || !generated.icon) {
+    console.error('Invalid response:', generated)
+    throw new Error('ИИ вернул некорректные данные')
+  }
+
+  console.log('Generated:', generated.name)
 
   return {
-    id: `generated-${index}`,
-    name: fallback.name,
-    description: fallback.desc,
-    icon: fallback.icon,
+    id: `generated-${toolIndex}-${Date.now()}`,
+    name: generated.name,
+    description: generated.description,
+    icon: generated.icon,
     baseCost,
     baseProduction,
     tier: 3,
     ptGeneration,
     dpGeneration
-  }
-}
-
-/**
- * Проверяет доступность API генерации
- */
-export async function checkGeneratorAvailable(): Promise<boolean> {
-  try {
-    const response = await fetch('/api/generate-tool', {
-      method: 'OPTIONS'
-    })
-    return response.ok
-  } catch {
-    return false
   }
 }
